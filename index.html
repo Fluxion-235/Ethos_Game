@@ -1,10 +1,741 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schoolyard Showdown - Multiplayer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --jocks-red: #d0021b;
+            --brainiacs-blue: #4a90e2;
+            --projectile-yellow: #f5a623;
+            --wood-brown: #5a4539;
+            --grass-green: #a0d8a4;
+            --dark-bg: #222;
+            --light-text: #fff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: var(--light-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            background: linear-gradient(45deg, var(--grass-green), #8bc34a);
+            border: 5px solid var(--wood-brown);
+            cursor: crosshair;
+            box-sizing: border-box;
+            display: block;
+            border-radius: 5px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0,0,0,0.95), rgba(0,0,0,0.9));
+            border: 5px solid var(--wood-brown);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 20px;
+            z-index: 10;
+            border-radius: 10px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        h1 {
+            color: var(--projectile-yellow);
+            font-size: 2.5em;
+            text-shadow: 3px 3px #000;
+            margin-bottom: 30px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 3px 3px #000, 0 0 10px var(--projectile-yellow); }
+            to { text-shadow: 3px 3px #000, 0 0 20px var(--projectile-yellow), 0 0 30px var(--projectile-yellow); }
+        }
+
+        h2 { margin-top: 0; font-size: 1.5em; line-height: 1.5em; color: var(--brainiacs-blue); }
+        p { font-size: 0.9em; line-height: 1.4em; }
+
+        button {
+            background: linear-gradient(45deg, var(--brainiacs-blue), #357ABD);
+            color: white;
+            border: 3px solid var(--light-text);
+            padding: 15px 30px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            font-family: 'Press Start 2P', cursive;
+            text-transform: uppercase;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        button:hover {
+            background: linear-gradient(45deg, #357ABD, var(--brainiacs-blue));
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+
+        button:active { transform: translateY(0px); }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        input[type="text"] {
+            padding: 15px;
+            font-size: 1em;
+            margin: 10px;
+            width: 300px;
+            text-align: center;
+            background: rgba(17,17,17,0.9);
+            color: var(--light-text);
+            border: 3px solid #666;
+            border-radius: 8px;
+            font-family: 'Press Start 2P', cursive;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--brainiacs-blue);
+            outline: none;
+        }
+
+        #player-list {
+            list-style: none;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 90%;
+            margin: 20px 0;
+        }
+
+        #player-list li {
+            margin: 8px 0;
+            background: linear-gradient(45deg, #444, #555);
+            padding: 12px;
+            font-size: 0.8em;
+            border-radius: 5px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+        }
+
+        #game-id-display {
+            font-size: 2em;
+            background: linear-gradient(45deg, #111, #333);
+            padding: 15px 25px;
+            border: 3px solid var(--projectile-yellow);
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 20px;
+            transition: all 0.3s;
+        }
+
+        #game-id-display:hover {
+            background: linear-gradient(45deg, #333, #111);
+            transform: scale(1.05);
+        }
+
+        #game-ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            color: white;
+            display: none;
+            z-index: 5;
+        }
+
+        #game-ui .team-info {
+            display: flex;
+            justify-content: space-between;
+            text-shadow: 2px 2px #000;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .king-health-bar {
+            width: 300px;
+            height: 25px;
+            background-color: #555;
+            border: 3px solid #fff;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .king-health-bar > div {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 100%;
+            transition: width 0.5s ease;
+            border-radius: 2px;
+        }
+
+        .team-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+        }
+
+        #connection-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.7em;
+            z-index: 20;
+        }
+
+        .status-connected { background-color: #4CAF50; }
+        .status-disconnected { background-color: #f44336; }
+        .status-reconnecting { background-color: #FF9800; }
+
+        #message-box {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            padding: 15px 25px;
+            border: 3px solid #fff;
+            border-radius: 10px;
+            font-size: 0.9em;
+            display: none;
+            z-index: 20;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        #minimap {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 160px;
+            height: 120px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #fff;
+            border-radius: 5px;
+            z-index: 15;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-$END$
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="connection-status" class="status-disconnected">Connecting...</div>
+
+        <div id="game-ui">
+             <div class="team-info">
+                <div id="team-a-info">
+                    <h3 id="team-a-name-ui">The Jocks</h3>
+                    <div class="king-health-bar"><div id="team-a-king-health"></div></div>
+                    <p>Players: <span id="team-a-count">0</span></p>
+                </div>
+                <div id="team-b-info" style="text-align: right;">
+                    <h3 id="team-b-name-ui">The Brainiacs</h3>
+                    <div class="king-health-bar"><div id="team-b-king-health"></div></div>
+                    <p>Players: <span id="team-b-count">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="minimap"></canvas>
+        <div id="message-box"></div>
+
+        <div id="start-screen" class="screen active">
+            <h1>Schoolyard Showdown</h1>
+            <p>Enter the ultimate playground battle!</p>
+            <input type="text" id="player-name-input" placeholder="Enter Your Name" maxlength="12" required>
+            <button id="create-game-btn">Create Game</button>
+            <div style="margin: 20px 0; opacity: 0.7;">───── OR ─────</div>
+            <input type="text" id="join-game-id-input" placeholder="Enter Game ID" maxlength="4">
+            <button id="join-game-btn">Join Game</button>
+        </div>
+
+        <div id="lobby-screen" class="screen">
+            <h2>Game Lobby</h2>
+            <p>Share this Game ID with your friends:</p>
+            <div id="game-id-display" title="Click to copy">----</div>
+
+             <ul id="player-list"></ul>
+
+            <p>Players: <span id="player-count">0</span>/10</p>
+            <button id="start-game-btn" disabled>Start Game</button>
+            <p id="start-game-message">Waiting for host to start the game...</p>
+            <button id="leave-lobby-btn" style="background: var(--jocks-red);">Leave Game</button>
+        </div>
+
+        <div id="gameover-screen" class="screen">
+            <h1 id="winner-announcement">Game Over!</h1>
+            <p id="game-stats"></p>
+            <button id="play-again-btn">Play Again</button>
+            <button id="return-to-menu-btn" style="background: var(--jocks-red);">Main Menu</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyDssDfLMCjME_cWeVYlsGWfXTXQA5CNxac",
+          authDomain: "ethos-game-22ea5.firebaseapp.com",
+          projectId: "ethos-game-22ea5",
+          storageBucket: "ethos-game-22ea5.firebasestorage.app",
+          messagingSenderId: "988292549601",
+          appId: "1:988292549601:web:abaf0042eb49d53a8ee0a0",
+          measurementId: "G-1GG7E1LGQZ"
+        };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'schoolyard-showdown';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
+        canvas.width = 800;
+        canvas.height = 600;
+        minimapCanvas.width = 160;
+        minimapCanvas.height = 120;
+
+        let gameState = 'START_SCREEN';
+        let localPlayer = {
+            userId: null, name: "Rookie", x: 100, y: 300, width: 30, height: 30,
+            color: '#fff', team: null, isKing: false, isAlive: true,
+            health: 100, maxHealth: 100, lastSync: 0
+        };
+
+        let gameId = null;
+        let gameData = {};
+        let gameObjects = [];
+        let unsubscribeGameListener = null;
+        let animationFrameId;
+        let lastUpdateTime = 0;
+
+        // UI Elements
+        const screens = {
+            start: document.getElementById('start-screen'),
+            lobby: document.getElementById('lobby-screen'),
+            gameover: document.getElementById('gameover-screen'),
+        };
+        const gameUI = document.getElementById('game-ui');
+        const messageBox = document.getElementById('message-box');
+        const connectionStatusEl = document.getElementById('connection-status');
+
+        // Event Listeners
+        document.getElementById('create-game-btn').addEventListener('click', createGame);
+        document.getElementById('join-game-btn').addEventListener('click', joinGame);
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+        document.getElementById('game-id-display').addEventListener('click', copyGameId);
+        document.getElementById('play-again-btn').addEventListener('click', playAgain);
+        document.getElementById('return-to-menu-btn').addEventListener('click', () => window.location.reload());
+        document.getElementById('leave-lobby-btn').addEventListener('click', leaveLobby);
+
+        const keys = { w: false, a: false, s: false, d: false };
+        let mousePos = { x: 0, y: 0 };
+        let lastShootTime = 0;
+        const shootCooldown = 200; // ms
+
+        window.addEventListener('keydown', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = false; });
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos.x = e.clientX - rect.left;
+            mousePos.y = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', handleShoot);
+        window.addEventListener('beforeunload', cleanup);
+
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                localPlayer.userId = user.uid;
+                updateConnectionStatus('connected');
+            } else {
+                updateConnectionStatus('reconnecting');
+                signInAnonymously(auth).catch(error => {
+                    console.error("Authentication failed:", error);
+                    showMessage("Connection failed. Please refresh the page.", 5000);
+                    updateConnectionStatus('disconnected');
+                });
+            }
+        });
+
+        // Helper Functions
+        function updateConnectionStatus(status) {
+            const statusTexts = { connected: 'Connected', disconnected: 'Disconnected', reconnecting: 'Reconnecting...' };
+            connectionStatusEl.textContent = statusTexts[status];
+            connectionStatusEl.className = `status-${status}`;
+        }
+        function showScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            if (screens[screenName]) screens[screenName].classList.add('active');
+            gameUI.style.display = (screenName === 'none') ? 'block' : 'none';
+            minimapCanvas.style.display = (screenName === 'none') ? 'block' : 'none';
+        }
+        function showMessage(text, duration = 3000) {
+            messageBox.innerHTML = text;
+            messageBox.style.display = 'block';
+            setTimeout(() => { messageBox.style.display = 'none'; }, duration);
+        }
+        function copyGameId() {
+            if (gameId) navigator.clipboard.writeText(gameId).then(() => showMessage("Game ID copied! 📋"));
+        }
+
+        // Game Flow
+        async function createGame() {
+            if (!localPlayer.userId) { showMessage("Connecting..."); return; }
+            localPlayer.name = document.getElementById('player-name-input').value.trim() || "Rookie";
+
+            showMessage('<span class="loading"></span>Creating game...', 0);
+            gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const gameRef = doc(db, `/artifacts/${appId}/public/data/games`, gameId);
+
+            try {
+                await setDoc(gameRef, {
+                    hostId: localPlayer.userId, gameState: 'lobby',
+                    players: { [localPlayer.userId]: { name: localPlayer.name, joinTime: Date.now() } },
+                    projectiles: {}
+                });
+                showMessage("Game created! 🎮");
+                listenToGameUpdates();
+            } catch (error) {
+                console.error("Game creation failed:", error);
+                showMessage("Failed to create game.");
+            }
+        }
+        async function joinGame() {
+            if (!localPlayer.userId) { showMessage("Connecting..."); return; }
+            localPlayer.name = document.getElementById('player-name-input').value.trim() || "Rookie";
+            const joinId = document.getElementById('join-game-id-input').value.trim().toUpperCase();
+            if (!joinId) { showMessage("Please enter a Game ID."); return; }
+
+            showMessage('<span class="loading"></span>Joining game...', 0);
+            const gameRef = doc(db, `/artifacts/${appId}/public/data/games`, joinId);
+
+            try {
+                const gameSnap = await getDoc(gameRef);
+                if (gameSnap.exists() && Object.keys(gameSnap.data().players).length < 10) {
+                    gameId = joinId;
+                    await updateDoc(gameRef, { [`players.${localPlayer.userId}`]: { name: localPlayer.name, joinTime: Date.now() } });
+                    showMessage("Joined game! 🎉");
+                    listenToGameUpdates();
+                } else {
+                    showMessage("Game not found or is full!");
+                }
+            } catch (error) {
+                console.error("Failed to join game:", error);
+                showMessage("Failed to join game.");
+            }
+        }
+        function listenToGameUpdates() {
+            showScreen('lobby');
+            const gameRef = doc(db, `/artifacts/${appId}/public/data/games`, gameId);
+            unsubscribeGameListener = onSnapshot(gameRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    showMessage("Game was closed.");
+                    setTimeout(() => window.location.reload(), 2000);
+                    return;
+                }
+                gameData = docSnap.data();
+                gameState = gameData.gameState;
+
+                if (gameState === 'lobby') updateLobbyUI();
+                else if (gameState === 'gameplay') {
+                    if (!animationFrameId) startGameLoop();
+                    syncGameObjects();
+                } else if (gameState === 'gameover') {
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    showGameOverScreen();
+                }
+            });
+        }
+        function updateLobbyUI() {
+            document.getElementById('game-id-display').textContent = gameId;
+            const players = gameData.players || {};
+            const playerCount = Object.keys(players).length;
+            document.getElementById('player-count').textContent = playerCount;
+            document.getElementById('player-list').innerHTML = Object.values(players).map(p => `<li>${p.name}</li>`).join('');
+
+            const isHost = localPlayer.userId === gameData.hostId;
+            document.getElementById('start-game-btn').style.display = isHost ? 'block' : 'none';
+            document.getElementById('start-game-message').style.display = isHost ? 'none' : 'block';
+            document.getElementById('start-game-btn').disabled = playerCount < 2;
+        }
+        async function startGame() {
+            const playerIds = Object.keys(gameData.players);
+            const updatedPlayers = {};
+            playerIds.forEach((id, index) => {
+                const isTeamA = index % 2 === 0;
+                const isKing = (isTeamA && index === 0) || (!isTeamA && index === 1);
+                updatedPlayers[id] = {
+                    ...gameData.players[id], team: isTeamA ? 'A' : 'B', isKing: isKing, isAlive: true,
+                    maxHealth: isKing ? 300 : 100, health: isKing ? 300 : 100,
+                    x: isTeamA ? 50 + Math.random() * 150 : canvas.width - 200 + Math.random() * 150,
+                    y: 100 + Math.random() * (canvas.height - 200)
+                };
+            });
+            await updateDoc(doc(db, `/artifacts/${appId}/public/data/games`, gameId), { gameState: 'gameplay', players: updatedPlayers });
+        }
+        async function leaveLobby() {
+            await cleanup();
+            window.location.reload();
+        }
+        async function handleShoot(e) {
+            if (gameState !== 'gameplay' || !localPlayer.isAlive) return;
+            const currentTime = Date.now();
+            if (currentTime - lastShootTime < shootCooldown) return;
+            lastShootTime = currentTime;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const centerX = localPlayer.x + localPlayer.width / 2;
+            const centerY = localPlayer.y + localPlayer.height / 2;
+            const angle = Math.atan2(mouseY - centerY, mouseX - centerX);
+            const speed = 8;
+            const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+            const projectileId = `${localPlayer.userId}-${currentTime}`;
+            const projectile = {
+                x: centerX - 4, y: centerY - 4, width: 8, height: 8, velocity: velocity,
+                ownerId: localPlayer.userId, team: localPlayer.team, damage: 10, createdAt: currentTime
+            };
+            await updateDoc(doc(db, `/artifacts/${appId}/public/data/games`, gameId), { [`projectiles.${projectileId}`]: projectile });
+        }
+
+        // Game Loop & Drawing
+        function startGameLoop() {
+            showScreen('none');
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+        function gameLoop() {
+            if (gameState !== 'gameplay') return;
+            const currentTime = Date.now();
+            const deltaTime = currentTime - lastUpdateTime;
+            lastUpdateTime = currentTime;
+            updatePlayerMovement(deltaTime);
+            handleCollisionsAndUpdates();
+            draw();
+            drawMinimap();
+            updateGameUI();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+        function updatePlayerMovement(deltaTime) {
+            if (!localPlayer.isAlive) return;
+            const speed = 200; // pixels per second
+            const moveDistance = (speed * deltaTime) / 1000;
+            let moved = false;
+            if (keys.w) { localPlayer.y = Math.max(0, localPlayer.y - moveDistance); moved = true; }
+            if (keys.s) { localPlayer.y = Math.min(canvas.height - localPlayer.height, localPlayer.y + moveDistance); moved = true; }
+            if (keys.a) { localPlayer.x = Math.max(0, localPlayer.x - moveDistance); moved = true; }
+            if (keys.d) { localPlayer.x = Math.min(canvas.width - localPlayer.width, localPlayer.x + moveDistance); moved = true; }
+            if (moved && Date.now() - localPlayer.lastSync > 100) {
+                updateDoc(doc(db, `/artifacts/${appId}/public/data/games`, gameId), {
+                    [`players.${localPlayer.userId}.x`]: localPlayer.x,
+                    [`players.${localPlayer.userId}.y`]: localPlayer.y
+                });
+                localPlayer.lastSync = Date.now();
+            }
+        }
+        function syncGameObjects() {
+            gameObjects = [];
+            for (const id in gameData.players) {
+                const pData = gameData.players[id];
+                if (!pData.isAlive) continue;
+                const playerObj = {
+                    ...pData, id: id, type: 'player', width: pData.isKing ? 40 : 30, height: pData.isKing ? 40 : 30,
+                    color: pData.team === 'A' ? 'var(--jocks-red)' : 'var(--brainiacs-blue)'
+                };
+                gameObjects.push(playerObj);
+                if (id === localPlayer.userId) Object.assign(localPlayer, playerObj);
+            }
+            for (const id in gameData.projectiles || {}) {
+                gameObjects.push({ ...gameData.projectiles[id], id: id, type: 'projectile', color: 'var(--projectile-yellow)' });
+            }
+        }
+        function handleCollisionsAndUpdates() {
+            if (localPlayer.userId !== gameData.hostId) return; // Only host calculates collisions
+            const projectiles = gameData.projectiles || {};
+            const players = gameData.players || {};
+            const updates = {};
+            const currentTime = Date.now();
+
+            for (const projId in projectiles) {
+                const proj = projectiles[projId];
+                proj.x += proj.velocity.x;
+                proj.y += proj.velocity.y;
+
+                let hit = false;
+                for (const playerId in players) {
+                    const player = players[playerId];
+                    if (player.isAlive && player.team !== proj.team &&
+                        proj.x < player.x + player.width && proj.x + proj.width > player.x &&
+                        proj.y < player.y + player.height && proj.y + proj.height > player.y) {
+
+                        const newHealth = Math.max(0, player.health - proj.damage);
+                        updates[`players.${playerId}.health`] = newHealth;
+                        if(newHealth === 0) {
+                           updates[`players.${playerId}.isAlive`] = false;
+                           if(player.isKing) {
+                               updates.gameState = 'gameover';
+                               updates.winner = player.team === 'A' ? 'The Brainiacs' : 'The Jocks';
+                           }
+                        }
+                        hit = true;
+                        break;
+                    }
+                }
+
+                if (hit || proj.x < -20 || proj.x > canvas.width + 20 || proj.y < -20 || proj.y > canvas.height + 20 || currentTime - proj.createdAt > 5000) {
+                    updates[`projectiles.${projId}`] = null; // Mark for deletion
+                } else {
+                    updates[`projectiles.${projId}.x`] = proj.x;
+                    updates[`projectiles.${projId}.y`] = proj.y;
+                }
+            }
+
+            if(Object.keys(updates).length > 0) {
+                updateDoc(doc(db, `/artifacts/${appId}/public/data/games`, gameId), updates);
+            }
+        }
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            gameObjects.forEach(obj => {
+                ctx.fillStyle = obj.color;
+                ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+                if (obj.type === 'player') {
+                    if (obj.isKing) { ctx.fillStyle = '#FFD700'; ctx.font = '16px Arial'; ctx.textAlign = 'center'; ctx.fillText('👑', obj.x + obj.width / 2, obj.y - 5); }
+                    const barWidth = obj.width + 10, barX = obj.x - 5, barY = obj.y - 15;
+                    ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, barWidth, 6);
+                    const hp = obj.health / obj.maxHealth;
+                    ctx.fillStyle = hp > 0.6 ? '#4CAF50' : hp > 0.3 ? '#FF9800' : '#F44336';
+                    ctx.fillRect(barX, barY, barWidth * hp, 6);
+                }
+            });
+            // Draw crosshair
+            if (gameState === 'gameplay' && localPlayer.isAlive) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 2; ctx.beginPath();
+                ctx.moveTo(mousePos.x - 10, mousePos.y); ctx.lineTo(mousePos.x + 10, mousePos.y);
+                ctx.moveTo(mousePos.x, mousePos.y - 10); ctx.lineTo(mousePos.x, mousePos.y + 10); ctx.stroke();
+            }
+        }
+        function drawMinimap() {
+            const scale = 0.2;
+            minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            minimapCtx.strokeStyle = '#fff'; minimapCtx.lineWidth = 2; minimapCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+            gameObjects.forEach(obj => {
+                if (obj.type === 'player' && obj.isAlive) {
+                    const x = obj.x * scale, y = obj.y * scale, size = obj.isKing ? 6 : 4;
+                    minimapCtx.fillStyle = obj.color; minimapCtx.fillRect(x - size / 2, y - size / 2, size, size);
+                    if (obj.id === localPlayer.userId) { minimapCtx.strokeStyle = '#FFD700'; minimapCtx.lineWidth = 1; minimapCtx.strokeRect(x - size / 2 - 1, y - size / 2 - 1, size + 2, size + 2); }
+                }
+            });
+        }
+        function updateGameUI() {
+            const players = gameData.players || {};
+            document.getElementById('team-a-count').textContent = Object.values(players).filter(p => p.team === 'A' && p.isAlive).length;
+            document.getElementById('team-b-count').textContent = Object.values(players).filter(p => p.team === 'B' && p.isAlive).length;
+            const teamAKing = Object.values(players).find(p => p.isKing && p.team === 'A');
+            const teamBKing = Object.values(players).find(p => p.isKing && p.team === 'B');
+            if (teamAKing) document.getElementById('team-a-king-health').style.width = `${(teamAKing.health / teamAKing.maxHealth) * 100}%`;
+            if (teamBKing) document.getElementById('team-b-king-health').style.width = `${(teamBKing.health / teamBKing.maxHealth) * 100}%`;
+        }
+        function showGameOverScreen() {
+            document.getElementById('winner-announcement').textContent = `${gameData.winner} Win!`;
+            const alive = Object.values(gameData.players || {}).filter(p => p.isAlive).length;
+            const total = Object.keys(gameData.players || {}).length;
+            document.getElementById('game-stats').innerHTML = `Players remaining: ${alive}/${total}`;
+            showScreen('gameover');
+        }
+        async function playAgain() {
+            if (gameData.hostId === localPlayer.userId) {
+                await updateDoc(doc(db, `/artifacts/${appId}/public/data/games`, gameId), { gameState: 'lobby', projectiles: {}, winner: null });
+            } else {
+                showMessage("Only the host can restart.");
+            }
+        }
+        async function cleanup() {
+            if (unsubscribeGameListener) unsubscribeGameListener();
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (gameId && localPlayer.userId) {
+                const gameRef = doc(db, `/artifacts/${appId}/public/data/games`, gameId);
+                const gameSnap = await getDoc(gameRef);
+                if (gameSnap.exists()) {
+                    const players = gameSnap.data().players;
+                    delete players[localPlayer.userId];
+                    if (Object.keys(players).length > 0) {
+                        await updateDoc(gameRef, { players });
+                    } else {
+                        await deleteDoc(gameRef); // Delete game if last player leaves
+                    }
+                }
+            }
+        }
+        init();
+        function init() { showMessage("Welcome to Schoolyard Showdown! 🎮"); }
+
+    </script>
 </body>
 </html>
+
