@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precision - Final Version (Updated)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Press+Start+2P&family=Roboto+Mono:wght@700&display=swap');
+
+        :root {
+            --team-a-color: #f04d5d;
+            --team-b-color: #00b8d4;
+            --gem-color: #f7b733;
+            --bg-deep: #12121c;
+            --bg-medium: #1a1a2e;
+            --bg-light: #16213e;
+            --card-bg: rgba(22, 33, 62, 0.85);
+            --text-light: #e0fbfc;
+            --text-medium: #9fb3c8;
+            --text-dark: #627d98;
+            --font-main: 'Poppins', sans-serif;
+            --font-title: 'Press Start 2P', cursive;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-deep);
+            color: var(--text-light);
+            font-family: var(--font-main);
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        canvas {
+            background-color: #2c5d3d; /* Darker green for less eye strain */
+            cursor: none;
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- Modern UI System --- */
+
+        .screen {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(18, 18, 28, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 10;
+            animation: fadeIn 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .ui-card {
+            background: var(--card-bg);
+            padding: 40px 50px;
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Typography --- */
+
+        h1 {
+            font-family: var(--font-title);
+            font-size: clamp(2.5em, 5vw, 4em);
+            margin: 0 0 10px 0;
+            background: linear-gradient(45deg, var(--gem-color), #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(247, 183, 51, 0.3);
+        }
+        h2 {
+            font-family: var(--font-main);
+            font-weight: 700;
+            color: var(--text-light);
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        h3 {
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 1.4em;
+            margin: 20px 0 15px 0;
+            color: var(--gem-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6em;
+            color: var(--text-medium);
+            max-width: 600px;
+        }
+
+        /* --- Interactive Elements --- */
+
+        button {
+            background: linear-gradient(45deg, var(--team-b-color), #008c9e);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.1em;
+            font-family: var(--font-main);
+            font-weight: 700;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.2s ease-in-out;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 184, 212, 0.2), inset 0 -2px 0 rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 184, 212, 0.4), inset 0 -2px 0 rgba(0,0,0,0.3);
+            filter: brightness(1.1);
+        }
+        button:disabled {
+            background: var(--text-dark);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            filter: brightness(0.8);
+        }
+
+        input[type="text"] {
+            padding: 15px 20px;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            width: 350px;
+            text-align: center;
+            background: var(--bg-medium);
+            color: var(--text-light);
+            border: 2px solid var(--bg-light);
+            border-radius: 12px;
+            font-family: var(--font-main);
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--gem-color);
+            box-shadow: 0 0 15px rgba(247, 183, 51, 0.5);
+        }
+
+        /* --- Start Screen --- */
+
+        #start-screen {
+            background: radial-gradient(ellipse at bottom, var(--bg-light) 0%, var(--bg-deep) 100%);
+        }
+        .bg-characters { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: -1; opacity: 0.2; }
+        .character-silhouette {
+            position: absolute; bottom: -50px;
+            font-size: 300px; color: rgba(0,0,0,0.5);
+            animation: slide 80s linear infinite alternate;
+        }
+        .char1 { left: 5%; animation-duration: 75s; }
+        .char2 { left: 25%; animation-duration: 85s; animation-delay: -10s; font-size: 350px; }
+        .char3 { left: 45%; animation-duration: 70s; animation-delay: -20s; }
+        .char4 { left: 65%; animation-duration: 90s; animation-delay: -30s; font-size: 320px; }
+        .char5 { left: 85%; animation-duration: 80s; animation-delay: -40s; }
+        @keyframes slide { from { transform: translateY(0); } to { transform: translateY(-100px); } }
+
+        /* --- Lobby Screen --- */
+        #lobby-container { display: flex; justify-content: center; gap: 40px; width: 100%; max-width: 1200px; }
+        .team-panel {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            width: 450px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4), inset 0 5px 0 0 var(--color, transparent);
+            display: flex; flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        .team-panel.team-a { --color: var(--team-a-color); }
+        .team-panel.team-b { --color: var(--team-b-color); }
+        .team-panel h3 { font-size: 1.8em; margin: 0 0 20px 0; font-weight: 700; }
+        .team-panel.team-a h3 { color: var(--team-a-color); }
+        .team-panel.team-b h3 { color: var(--team-b-color); }
+        .player-list { list-style: none; padding: 0; margin: 0 0 20px 0; min-height: 250px; max-height: 40vh; overflow-y: auto; }
+        .player-list li {
+            background: var(--bg-medium); padding: 12px 18px; margin-bottom: 8px;
+            border-radius: 8px; font-size: 1.1em; display: flex;
+            justify-content: space-between; align-items: center;
+            font-weight: 600; transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+        .player-list li.local-player { border-left-color: var(--gem-color); font-weight: 700; }
+        .player-list li.can-vote:hover { background-color: var(--gem-color); cursor: pointer; color: var(--bg-deep); transform: translateX(5px); }
+        .team-actions { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--bg-light); }
+        .captain-actions { margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--gem-color); }
+        .captain-actions input { width: 100%; margin-bottom: 10px; font-size: 1em; }
+        .captain-actions button { width: 100%; padding: 10px; font-size: 0.9em; }
+
+        /* --- NEW LOADOUT UI STYLES --- */
+        #loadout-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px;
+            width: 100%;
+            max-width: 1400px;
+        }
+        .loadout-panel {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            width: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex; flex-direction: column;
+        }
+        .loadout-panel h3 { margin-top: 0; }
+        .loadout-panel .card-container {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .selection-card {
+            background: var(--bg-light); border-radius: 12px; padding: 15px;
+            cursor: pointer; transition: all 0.2s ease-in-out;
+            border: 2px solid var(--bg-light); width: 100%;
+            display: flex; flex-direction: row; align-items: center; text-align: left; gap: 15px;
+        }
+        .selection-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--text-medium);
+        }
+        .selection-card.selected {
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--gem-color);
+            box-shadow: 0 0 20px rgba(247, 183, 51, 0.3);
+            background: var(--card-bg);
+        }
+        .selection-card .icon { font-size: 2.5em; margin-bottom: 0; }
+        .selection-card .info h4 { font-family: var(--font-main); font-weight: 700; margin: 0 0 5px 0; font-size: 1em; color: var(--text-light);}
+        .selection-card .info p { font-size: 0.85em; margin: 0; color: var(--text-medium); line-height: 1.4; max-width: none; }
+
+        #character-preview-panel {
+            width: 400px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #character-preview-display {
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        #character-preview-stats {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0 0 0;
+            text-align: left;
+        }
+        #character-preview-stats li {
+            background: var(--bg-light);
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        #team-composition-display {
+            position: absolute;
+            bottom: 20px;
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 15px 25px;
+            border-top: 2px solid var(--gem-color);
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+        .teammate-card {
+            display: flex; flex-direction: column; align-items: center;
+            background: var(--bg-light); padding: 10px; border-radius: 10px;
+            width: 100px;
+        }
+        .teammate-card .name { font-weight: 700; font-size: 0.9em; }
+        .teammate-card .icon { font-size: 2.5em; margin: 5px 0; }
+
+        /* --- In-Game UI --- */
+        #game-ui { position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: white; display: none; z-index: 5; padding: 20px; pointer-events: none; font-family: var(--font-main); }
+        .top-bar-center { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; background: var(--card-bg); padding: 10px 30px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); pointer-events: all; }
+        .score-timer-container { display: flex; align-items: center; gap: 25px; }
+        .team-score { font-size: 2.5em; font-family: var(--font-mono); font-weight: 700; }
+        #team-a-score { color: var(--team-a-color); }
+        #team-b-score { color: var(--team-b-color); }
+        #game-timer { font-size: 2em; color: var(--text-light); font-family: var(--font-mono); }
+        .player-stats { display: flex; gap: 15px; margin-top: 10px; font-size: 0.9em; font-weight: 600; color: var(--text-medium); }
+        #player-hp { --hp-percent: 100%; position: relative; color: var(--text-light); transition: color 0.2s; z-index: 1; }
+        #player-hp::before { content: ''; position: absolute; left: -5px; top: 0; bottom: 0; width: calc(var(--hp-percent) + 10px); background: linear-gradient(90deg, var(--team-a-color), var(--gem-color)); border-radius: 5px; opacity: 0.4; z-index: -1; transition: width 0.3s ease; }
+        #player-hp.hurt { animation: flashRed 0.3s; }
+        @keyframes flashRed { 50% { color: #fff; filter: brightness(2); } }
+        .ability-bar { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 15px; pointer-events: all; }
+        .ability-slot { width: 70px; height: 70px; background: var(--card-bg); border: 2px solid var(--bg-light); border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; transition: all 0.2s ease; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .ability-slot:not(.on-cooldown) { border-color: var(--gem-color); box-shadow: 0 0 15px var(--gem-color); }
+        .ability-icon { font-size: 2.2em; }
+        .ability-key { position: absolute; top: 4px; right: 7px; font-family: var(--font-mono); font-size: 0.8em; opacity: 0.8; }
+        .cooldown-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.6em; font-family: var(--font-mono); transition: opacity 0.2s; opacity: 0; pointer-events: none; }
+        .ability-slot.on-cooldown .cooldown-overlay { opacity: 1; }
+        #message-box { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: var(--card-bg); padding: 15px 30px; border: 2px solid var(--gem-color); border-radius: 12px; font-size: 1.1em; font-family: var(--font-main); font-weight: 600; display: none; z-index: 20; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
+        #minimap-container { position: absolute; top: 20px; right: 20px; border: 2px solid rgba(255,255,255,0.1); border-radius: 15px; overflow: hidden; pointer-events: all; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+
+        /* --- Respawn Screen --- */
+        #respawn-screen { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(18, 18, 28, 0.95), transparent); padding: 30px; z-index: 6; display: none; flex-direction: column; align-items: center; pointer-events: all; }
+        #respawn-screen h2 { margin: 0 0 5px 0; color: var(--team-a-color); }
+        #respawn-screen p { margin: 0 0 20px 0; font-size: 1.2em; font-family: var(--font-mono); }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="game-ui">
+            <div class="top-bar-center">
+                <div class="score-timer-container">
+                    <div id="team-a-score" class="team-score">0</div>
+                    <div id="game-timer">12:00</div>
+                    <div id="team-b-score" class="team-score">0</div>
+                </div>
+                <div class="player-stats">
+                    <span id="player-hp">HP: 100</span>
+                    <span>|</span>
+                    <span id="player-kda">KDA: 0/0/0</span>
+                    <span>|</span>
+                    <span id="player-rank">1st</span>
+                </div>
+            </div>
+            <div class="ability-bar">
+                <div id="ability-1" class="ability-slot">
+                    <div class="ability-icon"></div>
+                    <div class="ability-key">Q</div>
+                    <div class="cooldown-overlay"></div>
+                </div>
+                <div id="ability-2" class="ability-slot">
+                    <div class="ability-icon"></div>
+                    <div class="ability-key">E</div>
+                    <div class="cooldown-overlay"></div>
+                </div>
+            </div>
+            <div id="minimap-container">
+                <canvas id="minimapCanvas"></canvas>
+            </div>
+        </div>
+
+        <div id="respawn-screen">
+             <h2>YOU ARE ELIMINATED</h2>
+             <p>Respawning in <span id="respawn-timer">10</span>s</p>
+             <div id="respawn-weapon-selection" class="card-container"></div>
+        </div>
+
+        <div id="message-box"></div>
+
+        <div id="start-screen" class="screen active">
+            <div class="bg-characters">
+                <div class="character-silhouette char1">🏃</div>
+                <div class="character-silhouette char2">👑</div>
+                <div class="character-silhouette char3">💪</div>
+                <div class="character-silhouette char4">🤓</div>
+                <div class="character-silhouette char5">💎</div>
+            </div>
+            <div class="ui-card">
+                <h1>Precision</h1>
+                <p style="margin-top: -10px; margin-bottom: 30px;">Choose your gear and jump into the fray!</p>
+                <input type="text" id="player-name-input" placeholder="Enter Your Name" value="Player" maxlength="12">
+                <button id="show-lobby-btn">Continue</button>
+            </div>
+        </div>
+
+        <div id="lobby-screen" class="screen">
+            <h2 id="lobby-title">Join a Team</h2>
+            <div id="lobby-container">
+                <div class="team-panel team-a">
+                    <h3 id="team-a-name-header">Team A</h3>
+                    <ul class="player-list" id="team-a-list"></ul>
+                    <div class="team-actions" id="team-a-actions"></div>
+                    <div class="captain-actions" id="team-a-captain-actions" style="display: none;">
+                        <p>CAPTAIN PRIVILEGES</p>
+                        <input type="text" id="team-a-rename-input" placeholder="Enter new team name" maxlength="12">
+                        <button onclick="renameTeam('A')">Rename</button>
+                    </div>
+                </div>
+                <div class="team-panel team-b">
+                    <h3 id="team-b-name-header">Team B</h3>
+                    <ul class="player-list" id="team-b-list"></ul>
+                    <div class="team-actions" id="team-b-actions"></div>
+                    <div class="captain-actions" id="team-b-captain-actions" style="display: none;">
+                        <p>CAPTAIN PRIVILEGES</p>
+                        <input type="text" id="team-b-rename-input" placeholder="Enter new team name" maxlength="12">
+                        <button onclick="renameTeam('B')">Rename</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadout-screen" class="screen">
+            <h2>Choose Your Loadout</h2>
+            <div id="loadout-container">
+                <div class="loadout-panel">
+                    <h3>Archetype</h3>
+                    <div id="archetype-selection-container" class="card-container"></div>
+                </div>
+                <div id="character-preview-panel">
+                    <h3>Your Operator</h3>
+                    <div id="character-preview-display">?</div>
+                    <ul id="character-preview-stats">
+                        <li>HP: --</li>
+                        <li>Speed: --</li>
+                        <li>Damage: --</li>
+                    </ul>
+                </div>
+                <div class="loadout-panel">
+                    <h3>Weapon</h3>
+                    <div id="weapon-selection-container" class="card-container"></div>
+                </div>
+            </div>
+            <button id="start-game-btn" style="display: none; margin-top: 30px;">Start Match</button>
+            <div id="team-composition-display" style="display: none;">
+                <h3>Your Squad</h3>
+            </div>
+        </div>
+
+
+        <div id="gameover-screen" class="screen">
+            <div class="ui-card">
+                <h1>Game Over</h1>
+                <h2 id="winner-announcement"></h2>
+                <p id="game-stats"></p>
+                <button id="play-again-btn">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
+        const respawnScreen = document.getElementById('respawn-screen');
+        const respawnTimerEl = document.getElementById('respawn-timer');
+
+        let gameState = 'START_SCREEN';
+        let lobbyState = 'TEAM_JOIN';
+        let gameObjects = [], projectiles = [], gems = [], turrets = [], acidPuddles = [], visualEffects = [];
+        let localPlayer = null, animationFrameId, gameTimerInterval;
+        let teamAScore = 0, teamBScore = 0, gameTime = 12 * 60;
+        let teamAName = 'Team A', teamBName = 'Team B';
+        const scoreToWin = 6;
+        const mapWidth = 6000, mapHeight = 4000;
+        const camera = { x: 0, y: 0, targetX: 0, targetY: 0 };
+        const ENEMY_LINGER_DURATION = 3000; // NEW: 3 seconds for last known position
+
+        let allPlayers = [], teamARoster = [], teamBRoster = [], captainA = null, captainB = null;
+
+        const characterClasses = {
+            'Tank': { desc: 'High health, low speed', icon: '🛡️', base: { health: 200, speed: 4, damage: 8, regen: 1 }, abilities: ['Ruck', 'Charge'] },
+            'Athlete': { desc: 'High speed, low damage', icon: '🏃', base: { health: 80, speed: 10, damage: 10, regen: 0.4 }, abilities: ['Sprint', 'Kick'] },
+            'Bully': { desc: 'Stops enemies', icon: '💪', base: { health: 100, speed: 7, damage: 12, regen: 0.2 }, abilities: ['Trauma', 'Destroy'] },
+            'Engineer': { desc: 'Places turrets', icon: '🔧', base: { health: 120, speed: 7, damage: 10, regen: 0.2 }, abilities: ['Turret', 'Wall'] },
+            'Nerd': { desc: 'High damage, low health', icon: '🤓', base: { health: 60, speed: 8, damage: 8, regen: 0.4 }, abilities: ['Gun', 'Cocoon'] },
+            'CS Student': { desc: 'Reveals and buffs', icon: '💻', base: { health: 100, speed: 7, damage: 10, regen: 0.2 }, abilities: ['Ping', 'Glitch'] }
+        };
+        const weaponArchetypes = {
+            'Acid Beaker': { desc: 'Corrosive DoT', icon: '🧪', damageMultiplier: 0.9, fireRateMultiplier: 0.8 },
+            'Nail Gun': { desc: 'High fire rate', icon: '🔫', damageMultiplier: 1.2, fireRateMultiplier: 1.4 },
+            'Metal Bottle': { desc: 'Standard issue', icon: '🍾', damageMultiplier: 1.1, fireRateMultiplier: 0.8 }
+        };
+        const abilityCooldowns = {
+            'Ruck': 60, 'Charge': 60, 'Sprint': 45, 'Kick': 30, 'Trauma': 60, 'Destroy': 30,
+            'Turret': 30, 'Wall': 45, 'Gun': 60, 'Cocoon': 45, 'Ping': 60, 'Glitch': 120
+        };
+
+        const screens = {
+            start: document.getElementById('start-screen'),
+            lobby: document.getElementById('lobby-screen'),
+            loadout: document.getElementById('loadout-screen'),
+            gameover: document.getElementById('gameover-screen')
+        };
+
+        document.getElementById('show-lobby-btn').addEventListener('click', () => enterLobby());
+        document.getElementById('start-game-btn').addEventListener('click', () => startGame());
+        document.getElementById('play-again-btn').addEventListener('click', () => window.location.reload());
+
+        const keys = { w: false, a: false, s: false, d: false };
+        let mousePos = { x: 0, y: 0 };
+        let isMouseDown = false;
+        let lastShootTime = 0;
+        let playerChoices = { name: "Player", archetype: null, weapon: null };
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key in keys) keys[key] = true;
+            if (key === 'q') activateAbility(localPlayer, 0);
+            if (key === 'e') activateAbility(localPlayer, 1);
+        });
+        window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() in keys) keys[e.key.toLowerCase()] = false; });
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        });
+        canvas.addEventListener('mousedown', () => { isMouseDown = true; });
+        canvas.addEventListener('mouseup', () => { isMouseDown = false; });
+        canvas.addEventListener('mouseleave', () => { isMouseDown = false; });
+
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            minimapCanvas.width = mapWidth / 15;
+            minimapCanvas.height = mapHeight / 15;
+        }
+        function showScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            if (screens[screenName]) screens[screenName].classList.add('active');
+            document.getElementById('game-ui').style.display = (screenName === 'none') ? 'block' : 'none';
+        }
+        function showMessage(text, duration = 3000) {
+            const el = document.getElementById('message-box');
+            el.textContent = text; el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, duration);
+        }
+
+        function enterLobby() {
+            playerChoices.name = document.getElementById('player-name-input').value.trim() || "Player";
+            localPlayer = { name: playerChoices.name, isBot: false, team: null, votes: 0 };
+            const botNames = ["Shadow", "Vortex", "Blaze", "Fury", "Reaper", "Ghost", "Spike", "Viper", "Rogue"];
+            allPlayers = [localPlayer, ...botNames.map(name => ({ name, isBot: true, team: null, votes: 0 }))];
+            teamARoster = []; teamBRoster = []; captainA = null; captainB = null;
+            teamAName = 'Team A'; teamBName = 'Team B';
+            lobbyState = 'TEAM_JOIN';
+            document.getElementById('lobby-title').textContent = 'Join a Team';
+            showScreen('lobby');
+            updateLobbyUI();
+        }
+
+        function joinTeam(team) {
+            if (localPlayer.team) return;
+            localPlayer.team = team;
+            if (team === 'A') teamARoster.push(localPlayer); else teamBRoster.push(localPlayer);
+
+            let unassignedBots = allPlayers.filter(p => p.isBot);
+            unassignedBots.forEach(bot => {
+                 if (teamARoster.length <= teamBRoster.length) { teamARoster.push(bot); bot.team = 'A'; }
+                 else { teamBRoster.push(bot); bot.team = 'B'; }
+            });
+
+            lobbyState = 'CAPTAIN_VOTE';
+            document.getElementById('lobby-title').textContent = 'Vote for Your Captain';
+            updateLobbyUI();
+        }
+
+        function handleVote(votedForPlayerName) {
+            if (lobbyState !== 'CAPTAIN_VOTE') return;
+            const roster = localPlayer.team === 'A' ? teamARoster : teamBRoster;
+            const votedForPlayer = roster.find(p => p.name === votedForPlayerName);
+            if (!votedForPlayer) return;
+
+            roster.forEach(p => p.votes = 0);
+            votedForPlayer.votes++;
+            roster.filter(p => p.isBot).forEach(bot => roster[Math.floor(Math.random() * roster.length)].votes++);
+            roster.sort((a,b) => b.votes - a.votes);
+            if(localPlayer.team === 'A') captainA = roster[0]; else captainB = roster[0];
+
+            const aiRoster = localPlayer.team === 'A' ? teamBRoster : teamARoster;
+            aiRoster.forEach(p => p.votes = 0);
+            aiRoster.forEach(bot => aiRoster[Math.floor(Math.random() * aiRoster.length)].votes++);
+            aiRoster.sort((a,b) => b.votes - a.votes);
+            if(localPlayer.team === 'A') captainB = aiRoster[0]; else captainA = aiRoster[0];
+
+            updateLobbyUI();
+
+            if (captainA && captainB) {
+                lobbyState = 'CLASS_SELECT';
+                setTimeout(enterLoadoutSelection, 1000);
+            }
+        }
+
+        function enterLoadoutSelection() {
+            showScreen('loadout');
+            setupClassSelection();
+            updateCharacterPreview();
+        }
+
+        function setupClassSelection() {
+            const archetypeContainer = document.getElementById('archetype-selection-container');
+            const weaponContainer = document.getElementById('weapon-selection-container');
+            let archetypeHTML = '';
+            for(const className in characterClasses) {
+                const safeName = className.replace(/\s+/g, '');
+                const classData = characterClasses[className];
+                archetypeHTML += `<div class="selection-card" id="archetype-${safeName}" onclick="selectArchetype('${className}')">
+                    <div class="icon">${classData.icon}</div><div class="info"><h4>${className}</h4><p>${classData.desc}</p></div></div>`;
+            }
+            archetypeContainer.innerHTML = archetypeHTML;
+
+            let weaponHTML = '';
+            for (const name in weaponArchetypes) {
+                const data = weaponArchetypes[name];
+                weaponHTML += `<div class="selection-card" id="weapon-${name.replace(/\s+/g, '')}" onclick="selectWeapon('${name}')">
+                    <div class="icon">${data.icon}</div><div class="info"><h4>${name}</h4><p>${data.desc}</p></div></div>`;
+            }
+            weaponContainer.innerHTML = weaponHTML;
+        }
+
+        function selectArchetype(name) {
+            if (lobbyState !== 'CLASS_SELECT') return;
+            localPlayer.class = name;
+            playerChoices.archetype = name;
+            document.querySelectorAll('#archetype-selection-container .selection-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`archetype-${name.replace(/\s+/g, '')}`).classList.add('selected');
+            updateCharacterPreview();
+            checkSelections();
+        }
+
+        function selectWeapon(name) {
+            if (lobbyState !== 'CLASS_SELECT') return;
+            localPlayer.weapon = name;
+            playerChoices.weapon = name;
+            document.querySelectorAll('#weapon-selection-container .selection-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`weapon-${name.replace(/\s+/g, '')}`).classList.add('selected');
+            updateCharacterPreview();
+            checkSelections();
+        }
+
+        function checkSelections() {
+             if (playerChoices.archetype && playerChoices.weapon) {
+                lobbyState = 'READY';
+                document.getElementById('start-game-btn').style.display = 'block';
+                const classNames = Object.keys(characterClasses);
+                const weaponNames = Object.keys(weaponArchetypes);
+
+                allPlayers.filter(p => p.isBot && !p.class).forEach(bot => {
+                    bot.class = classNames[Math.floor(Math.random() * classNames.length)];
+                    bot.weapon = weaponNames[Math.floor(Math.random() * weaponNames.length)];
+                });
+                updateTeamComposition();
+            }
+        }
+
+        function renameTeam(team) {
+            if (team === 'A' && localPlayer === captainA) {
+                const newName = document.getElementById('team-a-rename-input').value.trim();
+                if (newName) teamAName = newName;
+            } else if (team === 'B' && localPlayer === captainB) {
+                const newName = document.getElementById('team-b-rename-input').value.trim();
+                if (newName) teamBName = newName;
+            }
+            updateLobbyUI();
+        }
+
+        function updateLobbyUI() {
+            document.getElementById('team-a-name-header').textContent = teamAName;
+            document.getElementById('team-b-name-header').textContent = teamBName;
+
+            const listA = document.getElementById('team-a-list'), listB = document.getElementById('team-b-list');
+            const generatePlayerHTML = (p, team) => {
+                const isCaptain = p === (team === 'A' ? captainA : captainB);
+                const isLocal = p === localPlayer;
+                const name = `${p.name} ${isCaptain ? '👑' : ''}`;
+                const classes = `${isLocal ? 'local-player' : ''} ${lobbyState === 'CAPTAIN_VOTE' && localPlayer.team === team && !isCaptain ? 'can-vote' : ''}`;
+                const clickHandler = (classes.includes('can-vote')) ? `onclick="handleVote('${p.name}')"` : '';
+                return `<li class="${classes}" ${clickHandler}>${name}</li>`;
+            };
+
+            listA.innerHTML = teamARoster.map(p => generatePlayerHTML(p, 'A')).join('');
+            listB.innerHTML = teamBRoster.map(p => generatePlayerHTML(p, 'B')).join('');
+
+            const actionsA = document.getElementById('team-a-actions'), actionsB = document.getElementById('team-b-actions');
+            actionsA.innerHTML = ''; actionsB.innerHTML = '';
+            if(lobbyState === 'TEAM_JOIN') {
+                actionsA.innerHTML = '<button onclick="joinTeam(\'A\')">Join Team A</button>';
+                actionsB.innerHTML = '<button onclick="joinTeam(\'B\')">Join Team B</button>';
+            } else {
+                 actionsA.innerHTML = `<p>Captain: ${captainA ? captainA.name : 'Voting...'} ${captainA ? '👑' : ''}</p>`;
+                 actionsB.innerHTML = `<p>Captain: ${captainB ? captainB.name : 'Voting...'} ${captainB ? '👑' : ''}</p>`;
+            }
+
+            document.getElementById('team-a-captain-actions').style.display = (localPlayer === captainA && lobbyState !== 'TEAM_JOIN') ? 'block' : 'none';
+            document.getElementById('team-b-captain-actions').style.display = (localPlayer === captainB && lobbyState !== 'TEAM_JOIN') ? 'block' : 'none';
+        }
+
+        // --- NEW UI UPDATE FUNCTIONS ---
+        function updateCharacterPreview() {
+            const preview = document.getElementById('character-preview-display');
+            const statsList = document.getElementById('character-preview-stats');
+
+            if (localPlayer.team === 'A') {
+                preview.style.backgroundColor = 'var(--team-a-color)';
+                preview.style.borderRadius = '50%';
+            } else {
+                preview.style.backgroundColor = 'var(--team-b-color)';
+                preview.style.borderRadius = '10px';
+            }
+
+            if (playerChoices.archetype) {
+                const classData = characterClasses[playerChoices.archetype];
+                preview.textContent = classData.icon;
+                statsList.innerHTML = `
+                    <li>HP: ${classData.base.health}</li>
+                    <li>Speed: ${classData.base.speed}</li>
+                    <li>Damage: ${classData.base.damage}</li>
+                `;
+            } else {
+                preview.textContent = '?';
+                statsList.innerHTML = `<li>HP: --</li><li>Speed: --</li><li>Damage: --</li>`;
+            }
+        }
+
+        function updateTeamComposition() {
+            const container = document.getElementById('team-composition-display');
+            const roster = localPlayer.team === 'A' ? teamARoster : teamBRoster;
+            let html = '<h3>Your Squad</h3>';
+            roster.forEach(p => {
+                if (p === localPlayer) return; // Skip self
+                const classIcon = p.class ? characterClasses[p.class].icon : '?';
+                const weaponIcon = p.weapon ? weaponArchetypes[p.weapon].icon : '?';
+                html += `
+                    <div class="teammate-card">
+                        <div class="name">${p.name}</div>
+                        <div class="icon">${classIcon} ${weaponIcon}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            container.style.display = 'flex';
+        }
+
+        function setupRespawnScreen() {
+            const container = document.getElementById('respawn-weapon-selection');
+            container.innerHTML = '';
+            for (const name in weaponArchetypes) {
+                const data = weaponArchetypes[name];
+                const cardHTML = `<div class="selection-card" id="respawn-weapon-${name.replace(/\s+/g, '')}" onclick="selectNextWeapon('${name}')">
+                    <div class="icon">${data.icon}</div><div class="info"><h4>${name}</h4><p>${data.desc}</p></div></div>`;
+                container.innerHTML += cardHTML;
+            }
+        }
+
+        function selectNextWeapon(weaponName) {
+            if (!localPlayer || localPlayer.isAlive) return;
+            localPlayer.nextWeapon = weaponName;
+            document.querySelectorAll('#respawn-weapon-selection .selection-card').forEach(c => c.classList.remove('selected'));
+            document.getElementById(`respawn-weapon-${weaponName.replace(/\s+/g, '')}`).classList.add('selected');
+        }
+
+        function applyWeaponStats(player) {
+            const classInfo = characterClasses[player.class];
+            const weaponInfo = weaponArchetypes[player.weapon];
+
+            player.baseDamage = player.isCaptain ? classInfo.base.damage + 2 : classInfo.base.damage;
+            player.damage = player.baseDamage * weaponInfo.damageMultiplier;
+            player.fireRate = 1 * weaponInfo.fireRateMultiplier;
+        }
+
+        function startGame() {
+            setupLocalGame();
+            gameState = 'gameplay';
+            showScreen('none');
+            gameLoop();
+            gameTimerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function setupLocalGame() {
+            gameObjects = [], projectiles = [], turrets = [], gems = [], acidPuddles = [], visualEffects = [];
+            teamAScore = 0; teamBScore = 0;
+            gameTime = 12 * 60;
+            resizeCanvas();
+
+            const allAssignedPlayers = [...teamARoster, ...teamBRoster];
+            allAssignedPlayers.forEach(p => {
+                const isCaptain = p === captainA || p === captainB;
+                gameObjects.push(createPlayer(p, isCaptain));
+            });
+
+            localPlayer = gameObjects.find(p => !p.isBot);
+            localPlayer.nextWeapon = localPlayer.weapon;
+
+            camera.x = localPlayer.x - canvas.width / 2;
+            camera.y = localPlayer.y - canvas.height / 2;
+
+            gems = [
+                { id: 'A', team: 'A', x: 200, y: mapHeight / 2, baseX: 200, baseY: mapHeight / 2, size: 30, carrier: null, droppedAt: 0 },
+                { id: 'B', team: 'B', x: mapWidth - 200, y: mapHeight / 2, baseX: mapWidth - 200, baseY: mapHeight / 2, size: 30, carrier: null, droppedAt: 0 }
+            ];
+            updateAbilityUI();
+            setupRespawnScreen();
+        }
+
+        function createPlayer(playerData, isCaptain) {
+            const classInfo = characterClasses[playerData.class];
+            let stats = { ...classInfo.base };
+
+            const p = {
+                id: Math.random(), name: playerData.name, class: playerData.class, team: playerData.team, weapon: playerData.weapon,
+                isCaptain, isBot: playerData.isBot, isAlive: true, respawnTimer: 0,
+                x: playerData.team === 'A' ? 50 + Math.random() * 250 : mapWidth - 300 + Math.random() * 250,
+                y: 100 + Math.random() * (mapHeight - 200),
+                radius: 15, maxHealth: stats.health, health: stats.health,
+                speed: stats.speed, baseSpeed: stats.speed, regen: stats.regen,
+                kills: 0, deaths: 0, assists: 0, lastShotTime: 0,
+                ability1Cooldown: 0, ability2Cooldown: 0,
+                effects: {},
+                // NEW properties for minimap visibility
+                isCurrentlyVisible: false,
+                lastSeenPosition: null
+            };
+            if (isCaptain) p.maxHealth += 20; p.health = p.maxHealth;
+            applyWeaponStats(p);
+            return p;
+        }
+
+        function handleShoot() {
+            if (gameState !== 'gameplay' || !localPlayer || !localPlayer.isAlive) return;
+            const currentTime = performance.now();
+            if (currentTime - lastShootTime < (1000 / localPlayer.fireRate )) return;
+            lastShootTime = currentTime;
+            createProjectile(localPlayer, {x: mousePos.x + camera.x, y: mousePos.y + camera.y});
+        }
+
+        function createProjectile(owner, target) {
+            const angle = Math.atan2(target.y - owner.y, target.x - owner.x);
+            const speed = 12;
+            const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+            projectiles.push({
+                x: owner.x, y: owner.y, radius: 5,
+                velocity, ownerId: owner.id, team: owner.team, damage: owner.damage, createdAt: Date.now(),
+                isAcid: owner.weapon === 'Acid Beaker'
+            });
+        }
+
+        // NEW function to track enemy visibility
+        function updateVisibility() {
+            if (!localPlayer) return;
+            const now = performance.now();
+            gameObjects.forEach(p => {
+                if (p.team === localPlayer.team || !p.isAlive) return; // Skip teammates and dead players
+
+                // Check if enemy is within camera view
+                const isVisible = (p.x > camera.x && p.x < camera.x + canvas.width && p.y > camera.y && p.y < camera.y + canvas.height);
+
+                if (isVisible) {
+                    p.isCurrentlyVisible = true;
+                    p.lastSeenPosition = { x: p.x, y: p.y, timestamp: now };
+                } else {
+                    p.isCurrentlyVisible = false;
+                }
+            });
+        }
+
+        function gameLoop(timestamp) {
+            if (gameState !== 'gameplay') return;
+            if (isMouseDown && localPlayer && localPlayer.isAlive) handleShoot();
+
+            updateVisibility(); // NEW
+            updatePlayers(timestamp);
+            updateBots(timestamp);
+            updateProjectiles();
+            updateGems();
+            updateTurrets(timestamp);
+            updateAcidPuddles(timestamp);
+            updateEffects(timestamp);
+            handleCollisions();
+            draw();
+            updateGameUI();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function updatePlayers(timestamp) {
+            gameObjects.forEach(p => {
+                if (p.isAlive && p.health < p.maxHealth && !p.effects.chargeCooldown && !p.effects.kickVulnerability) {
+                    p.health = Math.min(p.maxHealth, p.health + p.regen / 60);
+                }
+                if (!p.isAlive && timestamp > p.respawnTimer) {
+                    p.isAlive = true;
+                    p.health = p.maxHealth;
+                    p.x = p.team === 'A' ? 50 + Math.random() * 250 : mapWidth - 300 + Math.random() * 250;
+                    p.y = 100 + Math.random() * (mapHeight - 200);
+
+                    if (p === localPlayer) {
+                        respawnScreen.style.display = 'none';
+                        if (p.weapon !== p.nextWeapon) {
+                           p.weapon = p.nextWeapon;
+                           applyWeaponStats(p);
+                           showMessage(`Switched to ${p.weapon}!`);
+                        }
+                    }
+
+                    if(p.effects.glitched) {
+                        p.maxHealth /= 2;
+                        p.damage /= 2;
+                        delete p.effects.glitched;
+                    }
+                }
+            });
+
+            if (localPlayer && localPlayer.isAlive) {
+                let currentSpeed = localPlayer.speed;
+                if (localPlayer.effects.rucking || localPlayer.effects.traumatized || localPlayer.effects.charging) currentSpeed = 0;
+                if (localPlayer.effects.acidSlow) currentSpeed *= 0.5;
+
+                let dx = 0, dy = 0;
+                if (keys.w) dy -= 1;
+                if (keys.s) dy += 1;
+                if (keys.a) dx -= 1;
+                if (keys.d) dx += 1;
+
+                if (dx !== 0 || dy !== 0) {
+                    const mag = Math.sqrt(dx*dx + dy*dy);
+                    localPlayer.x += (dx / mag) * currentSpeed;
+                    localPlayer.y += (dy / mag) * currentSpeed;
+
+                    localPlayer.x = Math.max(localPlayer.radius, Math.min(mapWidth - localPlayer.radius, localPlayer.x));
+                    localPlayer.y = Math.max(localPlayer.radius, Math.min(mapHeight - localPlayer.radius, localPlayer.y));
+                }
+            }
+        }
+
+        function updateBots(timestamp) { /* Bot AI logic would go here */ }
+
+        function updateTurrets(timestamp) {
+            for (let i = turrets.length - 1; i >= 0; i--) {
+                const turret = turrets[i];
+                if (turret.health <= 0) { turrets.splice(i, 1); continue; }
+                if (timestamp > turret.lastShotTime + (1000 / turret.fireRate)) {
+                    let closestEnemy = null;
+                    let minDistance = 250;
+                    gameObjects.forEach(enemy => {
+                         if (enemy.isAlive && enemy.team !== turret.team) {
+                            const dist = Math.hypot(turret.x - enemy.x, turret.y - enemy.y);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                closestEnemy = enemy;
+                            }
+                        }
+                    });
+                    if (closestEnemy) {
+                        turret.target = closestEnemy;
+                        createProjectile(turret, closestEnemy);
+                        turret.lastShotTime = timestamp;
+                    } else {
+                        turret.target = null;
+                    }
+                }
+            }
+        }
+
+        function updateGems() {
+            const currentTime = Date.now();
+            gems.forEach(gem => {
+                if (gem.carrier) {
+                    gem.x = gem.carrier.x;
+                    gem.y = gem.carrier.y - gem.carrier.radius - 15;
+                } else if (gem.droppedAt > 0 && currentTime - gem.droppedAt > 60000) {
+                    gem.x = gem.baseX; gem.y = gem.baseY; gem.droppedAt = 0;
+                    showMessage(`Team ${gem.team}'s gem returned to base!`);
+                }
+            });
+        }
+
+        function updateAcidPuddles(timestamp) {
+            gameObjects.forEach(p => delete p.effects.acidSlow);
+
+            for(let i = acidPuddles.length - 1; i >= 0; i--) {
+                const puddle = acidPuddles[i];
+                if (timestamp > puddle.endTime) { acidPuddles.splice(i, 1); continue; }
+                gameObjects.forEach(p => {
+                    if (p.isAlive && Math.hypot(p.x - puddle.x, p.y - puddle.y) < p.radius + puddle.radius) {
+                        p.health = Math.max(0, p.health - 5 / 60);
+                        p.effects.acidSlow = true;
+                    }
+                });
+            }
+        }
+
+        function updateProjectiles() {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.velocity.x; p.y += p.velocity.y;
+                if (p.x < 0 || p.x > mapWidth || p.y < 0 || p.y > mapHeight || Date.now() - p.createdAt > 5000) {
+                    projectiles.splice(i, 1);
+                }
+            }
+        }
+
+        function updateEffects(timestamp) {
+             gameObjects.forEach(p => {
+                if (p.effects.acidDoT && timestamp > (p.effects.acidDoT.lastTick || 0) + 1000) {
+                    p.health = Math.max(0, p.health - 1); p.effects.acidDoT.lastTick = timestamp;
+                    p.effects.hitFlash = { end: timestamp + 100 };
+                }
+                if (p.effects.charging) {
+                    const angle = p.effects.charging.angle;
+                    p.x += Math.cos(angle) * 25;
+                    p.y += Math.sin(angle) * 25;
+                    p.x = Math.max(p.radius, Math.min(mapWidth - p.radius, p.x));
+                    p.y = Math.max(p.radius, Math.min(mapHeight - p.radius, p.y));
+                }
+
+                for (const effectName in p.effects) {
+                    const effect = p.effects[effectName];
+                    if (effect && effect.duration && timestamp > effect.end) {
+                        if (effectName === 'sprint') p.speed = p.baseSpeed;
+                        if (effectName === 'gun') { p.damage = p.baseDamage * weaponArchetypes[p.weapon].damageMultiplier; }
+                        if (effectName === 'kickVulnerability' && p.isAlive) p.health = effect.previousHealth;
+                        if (effectName === 'cocoon') {
+                             p.maxHealth -= 500; p.health = Math.min(p.health, p.maxHealth);
+                             p.damage = 1;
+                        }
+                        delete p.effects[effectName];
+                    }
+                }
+            });
+            visualEffects = visualEffects.filter(e => timestamp < e.end);
+        }
+
+        function handleCollisions() {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const proj = projectiles[i];
+                if (!proj) continue;
+
+                for (const turret of turrets) {
+                    if(turret.team !== proj.team && Math.hypot(proj.x - turret.x, proj.y - turret.y) < 18) {
+                        turret.health -= proj.damage;
+                        projectiles.splice(i,1);
+                        break;
+                    }
+                }
+
+                if(!projectiles[i]) continue;
+
+                for (const player of gameObjects) {
+                    if (!player.isAlive || player.team === proj.team || player.effects.rucking || player.effects.charging) continue;
+
+                    if (Math.hypot(proj.x - player.x, proj.y - player.y) < player.radius) {
+                        player.health = Math.max(0, player.health - proj.damage);
+                        player.effects.hitFlash = { end: performance.now() + 100 };
+                        if (proj.isAcid) {
+                            player.effects.acidDoT = { duration: 15000, end: performance.now() + 15000, lastTick: 0 };
+                            acidPuddles.push({x: proj.x, y: proj.y, radius: 30, endTime: performance.now() + 5000});
+                        }
+                        if(player.health <= 0) {
+                           player.isAlive = false; player.deaths++;
+                           const killer = gameObjects.find(p => p.id === proj.ownerId);
+                           if(killer) killer.kills++;
+                           player.respawnTimer = performance.now() + 10000;
+
+                           if (player === localPlayer) {
+                               respawnScreen.style.display = 'flex';
+                               selectNextWeapon(player.weapon);
+                           }
+
+                           const carriedGem = gems.find(g => g.carrier === player);
+                           if (carriedGem) { carriedGem.carrier = null; carriedGem.droppedAt = Date.now(); showMessage(`${player.name} dropped the gem!`); }
+                        }
+                        projectiles.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            gameObjects.forEach(player => {
+                if (!player.isAlive) return;
+                gems.forEach(gem => {
+                    if (player.team !== gem.team && !gem.carrier) {
+                        if (Math.hypot(player.x - gem.x, player.y - gem.y) < player.radius + gem.size / 2) {
+                            gem.carrier = player; gem.droppedAt = 0;
+                            showMessage(`${player.name} picked up Team ${gem.team}'s gem!`);
+                        }
+                    }
+                });
+                const carriedGem = gems.find(g => g.carrier === player);
+                if(carriedGem) {
+                    const homeBase = gems.find(g => g.team === player.team);
+                    if (Math.hypot(player.x - homeBase.baseX, player.y - homeBase.baseY) < 50) {
+                        if(player.team === 'A') teamAScore++; else teamBScore++;
+                        showMessage(`${player.name} scored for Team ${player.team}!`);
+                        carriedGem.carrier = null; carriedGem.x = carriedGem.baseX; carriedGem.y = carriedGem.baseY; carriedGem.droppedAt = 0;
+                        if(teamAScore >= scoreToWin) endGame('Team A');
+                        else if (teamBScore >= scoreToWin) endGame('Team B');
+                    }
+                }
+            });
+        }
+
+        function endGame(winner) {
+            if (gameState === 'gameover') return;
+            gameState = 'gameover';
+            clearInterval(gameTimerInterval);
+            cancelAnimationFrame(animationFrameId);
+            document.getElementById('winner-announcement').textContent = `${winner} Wins!`;
+            document.getElementById('game-stats').textContent = `Final Score: ${teamAScore} - ${teamBScore}`;
+            showScreen('gameover');
+        }
+
+        function draw() {
+            const now = performance.now();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            camera.targetX = localPlayer.x - canvas.width / 2;
+            camera.targetY = localPlayer.y - canvas.height / 2;
+            camera.x += (camera.targetX - camera.x) * 0.08;
+            camera.y += (camera.targetY - camera.y) * 0.08;
+
+            camera.x = Math.max(0, Math.min(camera.x, mapWidth - canvas.width));
+            camera.y = Math.max(0, Math.min(camera.y, mapHeight - canvas.height));
+
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < mapWidth; i += 50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, mapHeight); ctx.stroke(); }
+            for (let i = 0; i < mapHeight; i += 50) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(mapWidth, i); ctx.stroke(); }
+
+            gems.forEach(gem => {
+                const isTeamA = gem.team === 'A';
+                const teamColor = isTeamA ? 'rgba(240, 77, 93, 0.5)' : 'rgba(0, 184, 212, 0.5)';
+                const gradColorStop = isTeamA ? 'rgba(240, 77, 93, 0.3)' : 'rgba(0, 184, 212, 0.3)';
+
+                ctx.beginPath();
+                ctx.arc(gem.baseX, gem.baseY, 50, 0, Math.PI * 2);
+                const grad = ctx.createRadialGradient(gem.baseX, gem.baseY, 10, gem.baseX, gem.baseY, 50);
+                grad.addColorStop(0, gradColorStop);
+                grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.strokeStyle = teamColor;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            acidPuddles.forEach(puddle => {
+                ctx.fillStyle = "rgba(100, 255, 100, 0.3)";
+                ctx.beginPath(); ctx.arc(puddle.x, puddle.y, puddle.radius, 0, Math.PI * 2); ctx.fill();
+            });
+
+            gameObjects.sort((a,b) => a.y - b.y);
+            gems.forEach(gem => { if (!gem.carrier) { ctx.font = `${gem.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('💎', gem.x, gem.y); }});
+
+            turrets.forEach(turret => {
+                const angle = turret.target ? Math.atan2(turret.target.y - turret.y, turret.target.x - turret.x) : (turret.team === 'A' ? 0 : Math.PI);
+                ctx.save();
+                ctx.translate(turret.x, turret.y);
+                const turretColor = turret.team === 'A' ? '#a13326' : '#226a9c';
+                ctx.fillStyle = turret.health < 250 ? '#555' : turretColor;
+                ctx.beginPath(); ctx.arc(0,0,18, 0, Math.PI*2); ctx.fill();
+                ctx.rotate(angle);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(10, -5, 15, 10);
+                ctx.restore();
+            });
+
+            gameObjects.forEach(obj => {
+                if (!obj.isAlive) return;
+                const aimTarget = (obj === localPlayer) ? { x: mousePos.x + camera.x, y: mousePos.y + camera.y } : (obj.aiTarget || { x: obj.x + (obj.team === 'A' ? 10 : -10), y: obj.y });
+                const aimAngle = Math.atan2(aimTarget.y - obj.y, aimTarget.x - obj.x);
+
+                ctx.save();
+                ctx.translate(obj.x, obj.y);
+
+                if (obj.effects.charging) { ctx.fillStyle = 'rgba(255,255,100,0.5)'; ctx.beginPath(); ctx.arc(0,0,obj.radius + 10, 0, Math.PI*2); ctx.fill(); }
+                if (obj.effects.rucking) { ctx.fillStyle = 'rgba(200,200,200,0.7)'; ctx.beginPath(); ctx.arc(0,0,obj.radius + 5, 0, Math.PI*2); ctx.fill(); }
+                if (obj.effects.sprint) { for(let i=1; i<=3; i++) { ctx.fillStyle = `rgba(255,255,255,${0.3 - i*0.1})`; ctx.beginPath(); ctx.arc(-Math.cos(aimAngle)*i*15, -Math.sin(aimAngle)*i*15, obj.radius, 0, Math.PI*2); ctx.fill(); }}
+                if (obj.effects.glitched) { ctx.strokeStyle = Math.random() > 0.5 ? 'cyan' : 'magenta'; ctx.lineWidth = 3; ctx.strokeRect(-obj.radius, -obj.radius, obj.radius*2, obj.radius*2); }
+                if (obj.effects.pinged && obj !== localPlayer) { ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, obj.radius + 3, 0, Math.PI * 2); ctx.stroke(); }
+
+                const teamColor = obj.team === 'A' ? 'var(--team-a-color)' : 'var(--team-b-color)';
+                ctx.fillStyle = obj.effects.hitFlash && now < obj.effects.hitFlash.end ? '#FFFFFF' : teamColor;
+
+                ctx.beginPath();
+                if (obj.team === 'A') {
+                    ctx.arc(0, 0, obj.radius, 0, Math.PI * 2);
+                } else {
+                    ctx.rect(-obj.radius, -obj.radius, obj.radius * 2, obj.radius * 2);
+                }
+                ctx.shadowColor = teamColor; ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+
+                ctx.font = `${obj.radius * 1.5}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(characterClasses[obj.class].icon, 0, 0);
+
+
+                if (obj.effects.cocoon) { ctx.fillStyle = 'rgba(139, 69, 19, 0.5)'; ctx.beginPath(); ctx.arc(0,0,obj.radius + 8, 0, Math.PI*2); ctx.fill(); }
+                if (obj.effects.wallShield) { ctx.fillStyle = 'rgba(52, 152, 219, 0.4)'; ctx.strokeStyle = 'rgba(52, 152, 219, 0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0,0,obj.radius + 5, 0, Math.PI*2); ctx.fill(); ctx.stroke(); }
+
+                ctx.rotate(aimAngle);
+                ctx.fillStyle = obj.effects.gun ? 'var(--gem-color)' : '#34495e';
+                ctx.fillRect(obj.radius / 2, -5, obj.radius, 10);
+                ctx.restore();
+
+                const carriedGem = gems.find(g => g.carrier === obj);
+                if (carriedGem) { ctx.font = '24px Arial'; ctx.fillText('💎', obj.x, obj.y - obj.radius - 15); }
+
+                const barWidth = obj.radius * 2 + 10;
+                ctx.fillStyle = '#333'; ctx.fillRect(obj.x - barWidth/2, obj.y - obj.radius - 12, barWidth, 6);
+                const hp = obj.health / obj.maxHealth;
+                ctx.fillStyle = hp > 0.6 ? '#2ecc71' : hp > 0.3 ? '#f1c40f' : '#e74c3c';
+                ctx.fillRect(obj.x - barWidth/2, obj.y - obj.radius - 12, barWidth * hp, 6);
+            });
+
+            visualEffects.forEach(effect => {
+                const progress = (now - effect.start) / effect.duration;
+                const easedProgress = 1 - Math.pow(1 - progress, 2);
+
+                if (effect.type === 'trauma') { ctx.strokeStyle = `rgba(255, 255, 0, ${1-progress})`; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(effect.x, effect.y, progress * 150, 0, Math.PI * 2); ctx.stroke(); }
+                if (effect.type === 'destroy_pulse') { ctx.strokeStyle = `rgba(231, 76, 60, ${1-progress})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(effect.x, effect.y, easedProgress * 75, 0, Math.PI * 2); ctx.stroke(); }
+                if (effect.type === 'kick_burst') {
+                    ctx.strokeStyle = `rgba(241, 196, 15, ${1-progress})`; ctx.lineWidth = 3;
+                    for(let i = 0; i < 8; i++) {
+                        const angle = i * (Math.PI / 4);
+                        const len = (1 - progress) * 30;
+                        ctx.beginPath(); ctx.moveTo(effect.x + Math.cos(angle) * 10, effect.y + Math.sin(angle) * 10); ctx.lineTo(effect.x + Math.cos(angle) * len, effect.y + Math.sin(angle) * len); ctx.stroke();
+                    }
+                }
+                if (effect.type === 'charge_trail' && effect.player.isAlive) { ctx.fillStyle = `rgba(255, 255, 100, ${0.5 * (1-progress)})`; ctx.beginPath(); ctx.arc(effect.player.x, effect.player.y, effect.player.radius * (1-progress), 0, Math.PI * 2); ctx.fill(); }
+            });
+
+            projectiles.forEach(p => {
+                ctx.fillStyle = p.isAcid ? '#7FFF00' : 'var(--gem-color)';
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+            });
+
+            ctx.restore();
+
+            drawMinimap();
+
+            if (localPlayer && localPlayer.isAlive) {
+                const shootCooldownDuration = 1000 / localPlayer.fireRate;
+                const timeSinceShot = now - lastShootTime;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 2;
+                if (timeSinceShot < shootCooldownDuration) {
+                    const progress = timeSinceShot / shootCooldownDuration;
+                    ctx.beginPath();
+                    ctx.arc(mousePos.x, mousePos.y, 20, -Math.PI / 2, -Math.PI / 2 + progress * 2 * Math.PI, true);
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(mousePos.x - 10, mousePos.y); ctx.lineTo(mousePos.x + 10, mousePos.y);
+                    ctx.moveTo(mousePos.x, mousePos.y - 10); ctx.lineTo(mousePos.x, mousePos.y + 10);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function drawMinimap() {
+            const scale = minimapCanvas.width / mapWidth;
+            const now = performance.now();
+            minimapCtx.fillStyle = 'rgba(22, 33, 62, 0.7)';
+            minimapCtx.fillRect(0,0, minimapCanvas.width, minimapCanvas.height);
+
+            if (!localPlayer) return;
+
+            gameObjects.forEach(p => {
+                if (!p.isAlive) return;
+
+                if (p === localPlayer) {
+                    minimapCtx.fillStyle = 'yellow';
+                    minimapCtx.beginPath();
+                    minimapCtx.arc(p.x * scale, p.y * scale, 3, 0, Math.PI * 2);
+                    minimapCtx.fill();
+                } else if (p.team === localPlayer.team) {
+                    // Always show teammates
+                    minimapCtx.fillStyle = p.team === 'A' ? 'var(--team-a-color)' : 'var(--team-b-color)';
+                    if (p.team === 'A') {
+                        minimapCtx.beginPath();
+                        minimapCtx.arc(p.x * scale, p.y * scale, 2, 0, Math.PI * 2);
+                        minimapCtx.fill();
+                    } else {
+                        minimapCtx.fillRect(p.x * scale - 2, p.y * scale - 2, 4, 4);
+                    }
+                } else {
+                    // Handle enemies based on visibility
+                    if (p.isCurrentlyVisible) {
+                        minimapCtx.fillStyle = p.team === 'A' ? 'var(--team-a-color)' : 'var(--team-b-color)';
+                        if (p.team === 'A') {
+                            minimapCtx.beginPath();
+                            minimapCtx.arc(p.x * scale, p.y * scale, 2, 0, Math.PI * 2);
+                            minimapCtx.fill();
+                        } else {
+                           minimapCtx.fillRect(p.x * scale - 2, p.y * scale - 2, 4, 4);
+                        }
+                    } else if (p.lastSeenPosition && now - p.lastSeenPosition.timestamp < ENEMY_LINGER_DURATION) {
+                        // Show last known position
+                        const timeSinceSeen = now - p.lastSeenPosition.timestamp;
+                        const alpha = 1 - (timeSinceSeen / ENEMY_LINGER_DURATION);
+                        minimapCtx.fillStyle = `rgba(200, 200, 200, ${alpha})`;
+                        minimapCtx.font = 'bold 10px Arial';
+                        minimapCtx.textAlign = 'center';
+                        minimapCtx.textBaseline = 'middle';
+                        minimapCtx.fillText('?', p.lastSeenPosition.x * scale, p.lastSeenPosition.y * scale);
+                    }
+                }
+            });
+
+            gems.forEach(gem => {
+                minimapCtx.fillStyle = 'white';
+                minimapCtx.beginPath();
+                minimapCtx.arc(gem.x * scale, gem.y * scale, 3, 0, Math.PI*2);
+                minimapCtx.fill();
+            });
+
+            minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            minimapCtx.lineWidth = 1;
+            minimapCtx.strokeRect(camera.x * scale, camera.y * scale, canvas.width * scale, canvas.height * scale);
+        }
+
+        function updateGameUI() {
+            if (!localPlayer) return;
+            document.getElementById('team-a-score').textContent = teamAScore;
+            document.getElementById('team-b-score').textContent = teamBScore;
+            const hpEl = document.getElementById('player-hp');
+            if (localPlayer.effects.hitFlash && !hpEl.classList.contains('hurt')) {
+                hpEl.classList.add('hurt');
+                setTimeout(() => hpEl.classList.remove('hurt'), 200);
+            }
+            hpEl.textContent = `HP: ${Math.ceil(localPlayer.health)}`;
+            hpEl.style.setProperty('--hp-percent', `${(localPlayer.health / localPlayer.maxHealth) * 100}%`);
+
+            document.getElementById('player-kda').textContent = `KDA: ${localPlayer.kills}/${localPlayer.deaths}/${localPlayer.assists}`;
+
+            const sortedPlayers = [...gameObjects].sort((a,b) => b.kills - a.kills);
+            const rank = sortedPlayers.findIndex(p => p === localPlayer) + 1;
+            const rankSuffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+            document.getElementById('player-rank').textContent = `${rank}${rankSuffix}`;
+
+            updateAbilityUI();
+
+            if (!localPlayer.isAlive) {
+                const timeLeft = Math.max(0, (localPlayer.respawnTimer - performance.now()) / 1000).toFixed(1);
+                respawnTimerEl.textContent = timeLeft;
+            }
+        }
+
+        function updateTimer() {
+            if (gameState !== 'gameplay') return;
+            gameTime--;
+            const minutes = Math.floor(gameTime / 60);
+            const seconds = gameTime % 60;
+            document.getElementById('game-timer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if (gameTime <= 0) {
+                endGame(teamAScore > teamBScore ? "Team A" : teamAScore < teamBScore ? "Team B" : "Nobody");
+            }
+        }
+
+        function activateAbility(player, slot) {
+             if (!player || !player.isAlive || !player.class) return;
+            const now = performance.now();
+            const abilityName = characterClasses[player.class].abilities[slot];
+            const cooldownProp = slot === 0 ? 'ability1Cooldown' : 'ability2Cooldown';
+            if (now < (player[cooldownProp] || 0)) return;
+
+            let cooldown = abilityCooldowns[abilityName] * 1000;
+
+            switch(abilityName) {
+                case 'Ruck': player.effects.rucking = { duration: 5000, end: now + 5000 }; if (player === localPlayer) showMessage(`You became immune!`); break;
+                case 'Charge':
+                    const aimTarget = (player === localPlayer) ? { x: mousePos.x + camera.x, y: mousePos.y + camera.y } : { x: player.x + (player.team === 'A' ? 1 : -1), y: player.y };
+                    const angle = Math.atan2(aimTarget.y - player.y, aimTarget.x - player.x);
+                    player.effects.charging = { duration: 750, end: now + 750, angle: angle };
+                    for (let i = 0; i < 15; i++) { setTimeout(() => { if(player.effects.charging) visualEffects.push({ type: 'charge_trail', player: player, duration: 500, start: performance.now(), end: performance.now() + 500 }); }, i * 50); }
+                    if (player === localPlayer) showMessage(`You are charging!`);
+                    break;
+                case 'Sprint': player.speed = player.baseSpeed * 2; player.effects.sprint = { duration: 5000, end: now + 5000 }; break;
+                case 'Kick':
+                    const kickTarget = gameObjects.find(p => p.isAlive && p.team !== player.team && Math.hypot(p.x - player.x, p.y - player.y) < 50);
+                    if (kickTarget) {
+                        kickTarget.health = Math.max(0, kickTarget.health - 80);
+                        player.effects.kickVulnerability = { duration: 5000, end: now + 5000, previousHealth: player.health };
+                        player.health = 1;
+                        visualEffects.push({ type: 'kick_burst', x: player.x, y: player.y, duration: 300, start: now, end: now + 300 });
+                    } else { cooldown = 0; }
+                    break;
+                case 'Trauma':
+                    gameObjects.forEach(p => { if (p.isAlive && p.team !== player.team && Math.hypot(p.x-player.x, p.y-player.y) < 150) p.effects.traumatized = { duration: 3000, end: now + 3000 }; });
+                    visualEffects.push({ type: 'trauma', x: player.x, y: player.y, duration: 500, start: now, end: now + 500 });
+                    break;
+                case 'Destroy':
+                    turrets = turrets.filter(t => Math.hypot(t.x - player.x, t.y - player.y) >= 75);
+                    visualEffects.push({ type: 'destroy_pulse', x: player.x, y: player.y, duration: 400, start: now, end: now + 400 });
+                    break;
+                case 'Turret':
+                    const nerdClass = characterClasses['Nerd']; const nailGun = weaponArchetypes['Nail Gun'];
+                    const turretDamage = nerdClass.base.damage * nailGun.damageMultiplier; const turretFireRate = 1 * nailGun.fireRateMultiplier;
+                    turrets.push({ x: player.x, y: player.y, health: 500, team: player.team, damage: turretDamage, fireRate: turretFireRate, lastShotTime: 0, target: null });
+                    break;
+                case 'Wall':
+                    player.health = Math.min(player.maxHealth, player.health + 50);
+                    player.effects.wallShield = { duration: 5000, end: now + 5000 };
+                    if (player === localPlayer) showMessage("Temporary shield activated!");
+                    break;
+                case 'Gun': player.damage *= 2; player.effects.gun = { duration: 20000, end: now + 20000, previousDamage: player.damage }; break;
+                case 'Cocoon': player.maxHealth += 500; player.health += 500; player.damage = 1; player.effects.cocoon = { duration: 10000, end: now + 10000 }; break;
+                case 'Ping': gameObjects.forEach(p => { if (p.team !== player.team) p.effects.pinged = { duration: 2000, end: now + 2000 }; }); break;
+                case 'Glitch':
+                    let closest = null, minDist = 100;
+                    gameObjects.forEach(p => { if (p !== player && p.isAlive && p.team === player.team) { const d = Math.hypot(p.x-player.x,p.y-player.y); if(d<minDist){minDist=d;closest=p;}}});
+                    if (closest) {
+                        closest.maxHealth *= 2; closest.health *= 2; closest.damage *= 2;
+                        closest.effects.glitched = true;
+                        if (player === localPlayer) showMessage(`${player.name} glitched ${closest.name}!`);
+                    }
+                    else { cooldown = 0; }
+                    break;
+            }
+            player[cooldownProp] = now + cooldown;
+        }
+
+        function updateAbilityUI() {
+             if (!localPlayer || !localPlayer.class) return;
+            const classInfo = characterClasses[localPlayer.class];
+            const ability1Slot = document.getElementById('ability-1'), ability2Slot = document.getElementById('ability-2');
+            ability1Slot.querySelector('.ability-icon').textContent = classInfo.icon;
+            ability2Slot.querySelector('.ability-icon').textContent = classInfo.icon;
+            const now = performance.now();
+            const cd1 = localPlayer.ability1Cooldown || 0, cd2 = localPlayer.ability2Cooldown || 0;
+            if (now < cd1) { ability1Slot.classList.add('on-cooldown'); ability1Slot.querySelector('.cooldown-overlay').textContent = Math.ceil((cd1 - now) / 1000); } else { ability1Slot.classList.remove('on-cooldown'); }
+            if (now < cd2) { ability2Slot.classList.add('on-cooldown'); ability2Slot.querySelector('.cooldown-overlay').textContent = Math.ceil((cd2 - now) / 1000); } else { ability2Slot.classList.remove('on-cooldown'); }
+        }
+
+        function init() {
+            resizeCanvas();
+        }
+
+        window.enterLobby = enterLobby;
+        window.joinTeam = joinTeam;
+        window.handleVote = handleVote;
+        window.selectArchetype = selectArchetype;
+        window.selectWeapon = selectWeapon;
+        window.selectNextWeapon = selectNextWeapon;
+        window.renameTeam = renameTeam;
+
+        init();
+    </script>
+</body>
+</html>
