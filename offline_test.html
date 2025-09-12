@@ -423,7 +423,7 @@
             width: 100%;
             height: 100%;
         }
-        .gem-warning {
+        .phone-warning {
             position: absolute;
             top: 25%;
             left: 50%;
@@ -507,8 +507,8 @@
         <canvas id="gameCanvas"></canvas>
 
         <div id="game-ui">
-            <div id="gem-stolen-warning-a" class="gem-warning">OUR GEM HAS BEEN TAKEN!</div>
-            <div id="gem-stolen-warning-b" class="gem-warning">OUR GEM HAS BEEN TAKEN!</div>
+            <div id="phone-stolen-warning-a" class="phone-warning">OUR PHONE HAS BEEN TAKEN!</div>
+            <div id="phone-stolen-warning-b" class="phone-warning">OUR PHONE HAS BEEN TAKEN!</div>
 
             <div class="top-bar-center">
                 <div class="score-timer-container">
@@ -555,7 +555,7 @@
                 <div class="character-silhouette char2">👑</div>
                 <div class="character-silhouette char3">💪</div>
                 <div class="character-silhouette char4">🤓</div>
-                <div class="character-silhouette char5">💎</div>
+                <div class="character-silhouette char5">📱</div>
             </div>
             <div class="ui-card">
                 <h1>Precision</h1>
@@ -663,10 +663,10 @@
         let teamAScore = 0, teamBScore = 0, gameTime = 12 * 60;
         let teamAName = 'Team A', teamBName = 'Team B';
         let allPlayers = [], teamARoster = [], teamBRoster = [], captainA = null, captainB = null;
-        let teamAGemStolen = false, teamBGemStolen = false;
+        let teamAPhoneStolen = false, teamBPhoneStolen = false;
 
         // --- Game Objects ---
-        let gameObjects = [], projectiles = [], gems = [], turrets = [], acidPuddles = [], visualEffects = [], barriers = [];
+        let gameObjects = [], projectiles = [], phones = [], turrets = [], acidPuddles = [], visualEffects = [], barriers = [];
         let damageNumbers = [], statusTexts = [], particles = [];
 
         // --- Constants & Config ---
@@ -690,7 +690,13 @@
             'Gun': { desc: "For a short duration, your weapon's damage is doubled.", icon: '🔥'},
             'Cocoon': { desc: 'Gain a massive, temporary health boost, but your damage is reduced to 1.', icon: '🐛'},
             'Ping': { desc: 'Reveal the position of all enemies on the map to your entire team for 2 seconds.', icon: '📡'},
-            'Glitch': { desc: 'Grant a powerful, permanent buff to an ally that doubles their stats until they are eliminated.', icon: '👾'}
+            'Glitch': { desc: 'Grant a powerful, permanent buff to an ally that doubles their stats until they are eliminated.', icon: '👾'},
+            'Annihilation': { desc: 'Fires a high-speed particle that instantly kills the first enemy it hits.', icon: '🎯'},
+            'Ebola': { desc: 'Infects the closest enemy with a deadly plague that deals damage over time until death and spreads to nearby enemies.', icon: '☣️'},
+            'Curl': { desc: 'Lifts a nearby enemy and throws them. If they hit a wall, they take 50 damage. Your damage is halved for 15s after use.', icon: '💪'},
+            'Rest': { desc: 'Freeze in place for 3 seconds to prepare. Afterwards, all of your stats are doubled for 10 seconds.', icon: '😴'},
+            'Awaken': { desc: 'Can only be used when below 50% health. Permanently multiplies all stats by 2.5x until you are eliminated.', icon: '😡'},
+            'Help': { desc: 'A swift character with abilities yet to be defined.', icon: '❓'}
         };
         const characterClasses = {
             'Tank': { desc: 'The Tank is a front-line bruiser with immense health and survivability. Ideal for holding objectives and soaking up damage.', icon: '🛡️', base: { health: 200, speed: 4, damage: 8, regen: 1 }, abilities: ['Ruck', 'Charge'] },
@@ -698,16 +704,23 @@
             'Bully': { desc: 'The Bully specializes in disrupting enemies and clearing the way for their team. They use brute force to stop opponents in their tracks.', icon: '💪', base: { health: 100, speed: 7, damage: 12, regen: 0.2 }, abilities: ['Trauma', 'Destroy'] },
             'Engineer': { desc: 'The Engineer controls the battlefield by deploying stationary turrets and impenetrable walls. A master of area denial.', icon: '🔧', base: { health: 120, speed: 7, damage: 10, regen: 0.2 }, abilities: ['Turret', 'Wall'] },
             'Nerd': { desc: 'The Nerd is a glass cannon, capable of immense burst damage but vulnerable to sustained fire. A high-risk, high-reward choice.', icon: '🤓', base: { health: 60, speed: 8, damage: 8, regen: 0.4 }, abilities: ['Gun', 'Cocoon'] },
-            'CS Student': { desc: 'The CS Student is a support-focused character who reveals enemy positions and grants powerful, permanent buffs to their allies.', icon: '💻', base: { health: 100, speed: 7, damage: 10, regen: 0.2 }, abilities: ['Ping', 'Glitch'] }
+            'CS Student': { desc: 'The CS Student is a support-focused character who reveals enemy positions and grants powerful, permanent buffs to their allies.', icon: '💻', base: { health: 100, speed: 7, damage: 10, regen: 0.2 }, abilities: ['Ping', 'Glitch'] },
+            'Science Student': { desc: 'A deadly specialist who can eliminate targets instantly or with persistent, spreading plagues.', icon: '🔬', base: { health: 90, speed: 8, damage: 10, regen: 0.8 }, abilities: ['Annihilation', 'Ebola'] },
+            'Gym Hogger': { desc: 'A powerful brawler who manipulates enemy positions and can temporarily become a powerhouse.', icon: '🏋️', base: { health: 120, speed: 10, damage: 14, regen: 1.4 }, abilities: ['Curl', 'Rest'] },
+            'Quiet Kid': { desc: 'A dangerous threat who becomes exponentially more powerful when pushed to their limit.', icon: '🤫', base: { health: 100, speed: 10, damage: 12, regen: 0.8 }, abilities: ['Awaken', 'Help'] },
+            'Teacher\'s Pet': { desc: 'A swift character with abilities yet to be defined.', icon: '🍎', base: { health: 60, speed: 12, damage: 6, regen: 0.4 }, abilities: ['Help', 'Help'] }
         };
         const weaponArchetypes = {
             'Acid Beaker': { desc: 'A long-range weapon that applies a corrosive damage-over-time effect to enemies.', icon: '🧪', damageMultiplier: 0.9, fireRateMultiplier: 0.8 },
             'Nail Gun': { desc: 'A high-speed, close-range weapon that shreds enemies with a rapid succession of nails.', icon: '🔫', damageMultiplier: 1.2, fireRateMultiplier: 1.4 },
-            'Metal Bottle': { desc: 'A reliable, standard-issue weapon with a solid balance of damage and accuracy.', icon: '🍾', damageMultiplier: 1.1, fireRateMultiplier: 0.8 }
+            'Metal Bottle': { desc: 'A reliable, standard-issue weapon with a solid balance of damage and accuracy.', icon: '🍾', damageMultiplier: 1.1, fireRateMultiplier: 0.8 },
+            'Tennis Ball': { desc: 'An extremely fast-firing weapon that peppers enemies with low-damage projectiles.', icon: '🎾', damageMultiplier: 0.7, fireRateMultiplier: 1.6 },
+            'Scissor': { desc: 'A slow but devastating weapon that inflicts a grievous wound, preventing healing.', icon: '✂️', damageMultiplier: 1.5, fireRateMultiplier: 0.5 }
         };
         const abilityCooldowns = {
             'Ruck': 60, 'Charge': 60, 'Sprint': 45, 'Kick': 30, 'Trauma': 60, 'Destroy': 30,
-            'Turret': 30, 'Wall': 45, 'Gun': 60, 'Cocoon': 45, 'Ping': 60, 'Glitch': 120
+            'Turret': 30, 'Wall': 45, 'Gun': 60, 'Cocoon': 45, 'Ping': 60, 'Glitch': 120,
+            'Annihilation': 60, 'Ebola': 90, 'Curl': 30, 'Rest': 45, 'Awaken': 120, 'Help': 1
         };
 
         // --- Player Input State ---
@@ -1072,16 +1085,34 @@
         function applyWeaponStats(player) {
             const classInfo = characterClasses[player.class];
             const weaponInfo = weaponArchetypes[player.weapon];
-            if (!classInfo || !weaponInfo) return; // Guard clause
+            if (!classInfo || !weaponInfo) return;
 
-            player.baseDamage = player.isCaptain ? classInfo.base.damage + 2 : classInfo.base.damage;
-
-            // Apply gun effect if active
+            let baseDamage = player.isCaptain ? classInfo.base.damage + 2 : classInfo.base.damage;
             let damageMultiplier = weaponInfo.damageMultiplier;
-            if (player.effects.gun) damageMultiplier *= 2;
 
-            player.damage = player.baseDamage * damageMultiplier;
+            // Apply ability effects
+            if (player.effects.gun) damageMultiplier *= 2;
+            if (player.effects.damageDown) damageMultiplier *= 0.5;
+            if (player.effects.pumped) damageMultiplier *= 2;
+            if (player.effects.awakened) damageMultiplier *= 2.5;
+            if (player.effects.glitched) baseDamage *= 2; // Glitch affects base damage before multipliers
+            if (player.effects.cocoon) baseDamage = 1; // Cocoon overrides everything to 1 damage
+
+            player.damage = baseDamage * damageMultiplier;
             player.fireRate = 1 * weaponInfo.fireRateMultiplier;
+            player.baseRegen = classInfo.base.regen;
+
+            let finalRegen = player.baseRegen;
+            if (player.effects.regenBlock) finalRegen = 0;
+            if (player.effects.pumped) finalRegen *= 2;
+            if (player.effects.awakened) finalRegen *= 2.5;
+            player.regen = finalRegen;
+
+            let finalSpeed = player.baseSpeed;
+            if (player.effects.sprint) finalSpeed *= 2;
+            if (player.effects.pumped) finalSpeed *= 2;
+            if (player.effects.awakened) finalSpeed *= 2.5;
+            player.speed = finalSpeed;
         }
 
         // --- Game Core Logic ---
@@ -1094,10 +1125,10 @@
         }
 
         function setupLocalGame() {
-            gameObjects = [], projectiles = [], turrets = [], gems = [], acidPuddles = [], visualEffects = [], barriers = [];
+            gameObjects = [], projectiles = [], turrets = [], phones = [], acidPuddles = [], visualEffects = [], barriers = [];
             damageNumbers = [], statusTexts = [], particles = [];
             teamAScore = 0; teamBScore = 0;
-            teamAGemStolen = false; teamBGemStolen = false;
+            teamAPhoneStolen = false; teamBPhoneStolen = false;
             gameTime = 12 * 60;
 
             const allAssignedPlayers = [...teamARoster, ...teamBRoster];
@@ -1112,7 +1143,7 @@
             camera.x = localPlayer.x - canvas.width / 2;
             camera.y = localPlayer.y - canvas.height / 2;
 
-            gems = [
+            phones = [
                 { id: 'A', team: 'A', x: 200, y: mapHeight / 2, baseX: 200, baseY: mapHeight / 2, size: 30, carrier: null, droppedAt: 0 },
                 { id: 'B', team: 'B', x: mapWidth - 200, y: mapHeight / 2, baseX: mapWidth - 200, baseY: mapHeight / 2, size: 30, carrier: null, droppedAt: 0 }
             ];
@@ -1131,9 +1162,10 @@
                 y: 100 + Math.random() * (mapHeight - 200),
                 radius: 15, maxHealth: stats.health, health: stats.health,
                 shield: 0, maxShield: 50,
-                speed: stats.speed, baseSpeed: stats.speed, regen: stats.regen,
+                speed: stats.speed, baseSpeed: stats.speed, regen: stats.regen, baseRegen: stats.regen,
                 kills: 0, deaths: 0, assists: 0, lastShotTime: 0,
-                gemsScored: 0,
+                phonesScored: 0,
+                phonesStolen: 0,
                 ability1Cooldown: 0, ability2Cooldown: 0,
                 effects: {},
                 isCurrentlyVisible: false,
@@ -1161,14 +1193,24 @@
             createProjectile(localPlayer, {x: mousePos.x + camera.x, y: mousePos.y + camera.y});
         }
 
-        function createProjectile(owner, target) {
+        function createProjectile(owner, target, specialType = null) {
             const angle = Math.atan2(target.y - owner.y, target.x - owner.x);
-            const speed = 12;
-            const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+            let speed = 12;
+            let radius = 5;
+            let specialProps = {};
+            if (specialType === 'annihilation') {
+                speed = 40;
+                radius = 8;
+                specialProps.isAnnihilation = true;
+            }
+
             projectiles.push({
-                x: owner.x, y: owner.y, radius: 5,
-                velocity, ownerId: owner.id, team: owner.team, damage: owner.damage, createdAt: Date.now(),
-                isAcid: owner.weapon === 'Acid Beaker'
+                x: owner.x, y: owner.y, radius: radius,
+                velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+                ownerId: owner.id, team: owner.team, damage: owner.damage, createdAt: Date.now(),
+                isAcid: owner.weapon === 'Acid Beaker',
+                isScissor: owner.weapon === 'Scissor',
+                ...specialProps
             });
         }
 
@@ -1195,7 +1237,7 @@
             updatePlayers(timestamp);
             updateBots(timestamp);
             updateProjectiles();
-            updateGems();
+            updatePhones();
             updateTurrets(timestamp);
             updateBarriers(timestamp);
             updateAcidPuddles(timestamp);
@@ -1212,14 +1254,17 @@
                     p.health = Math.min(p.maxHealth, p.health + p.regen / 60);
                 }
                 if (!p.isAlive && timestamp > p.respawnTimer) {
-                    // REVERT STATS BEFORE RESPAWNING
-                    if(p.effects.glitched) {
+                    // Revert stats on respawn
+                    if (p.effects.glitched) {
                         p.maxHealth /= 2;
+                    }
+                    if (p.effects.awakened) {
+                        p.maxHealth /= 2.5;
                     }
 
                     p.isAlive = true;
                     p.health = p.maxHealth;
-                    p.shield = 0; // Reset shield on respawn
+                    p.shield = 0;
                     p.x = p.team === 'A' ? 50 + Math.random() * 250 : mapWidth - 300 + Math.random() * 250;
                     p.y = 100 + Math.random() * (mapHeight - 200);
                     p.effects = {}; // Clear all effects on respawn
@@ -1230,13 +1275,13 @@
                            p.weapon = p.nextWeapon;
                         }
                     }
-                    applyWeaponStats(p); // Reapply stats for bots and player
+                    applyWeaponStats(p);
                 }
             });
 
             if (localPlayer && localPlayer.isAlive) {
                 let currentSpeed = localPlayer.speed;
-                if (localPlayer.effects.rucking || localPlayer.effects.traumatized || localPlayer.effects.charging) currentSpeed = 0;
+                if (localPlayer.effects.rucking || localPlayer.effects.traumatized || localPlayer.effects.charging || localPlayer.effects.resting || localPlayer.effects.isAirborne) currentSpeed = 0;
                 if (localPlayer.effects.acidSlow) currentSpeed *= 0.5;
 
                 let dx = 0, dy = 0;
@@ -1252,15 +1297,10 @@
                     localPlayer.x += moveX;
                     localPlayer.y += moveY;
 
-                    // Barrier collision for local player
                     for (const wall of barriers) {
-                        if (localPlayer.team !== wall.team) {
-                            // Simple circular collision check for player against the wall's center
-                            if (Math.hypot(localPlayer.x - wall.x, localPlayer.y - wall.y) < localPlayer.radius + wall.width / 2) {
-                                localPlayer.x -= moveX; // Revert movement
-                                localPlayer.y -= moveY;
-                                break;
-                            }
+                        if (Math.hypot(localPlayer.x - wall.x, localPlayer.y - wall.y) < localPlayer.radius + wall.width / 2) {
+                            localPlayer.x -= moveX; localPlayer.y -= moveY;
+                            break;
                         }
                     }
 
@@ -1272,46 +1312,50 @@
 
         function updateBots(timestamp) {
             gameObjects.filter(p => p.isBot && p.isAlive).forEach(bot => {
-                // Decision Making
                 const enemies = gameObjects.filter(e => e.isAlive && e.team !== bot.team);
-                const closestEnemy = enemies.sort((a, b) => Math.hypot(a.x - bot.x, a.y - bot.y) - Math.hypot(b.x - bot.x, b.y - bot.y))[0];
+                const visibleEnemies = enemies.filter(e => {
+                    const distance = Math.hypot(e.x - bot.x, e.y - bot.y);
+                    return distance < 400 || e.effects.pinged;
+                });
+
+                const closestEnemy = visibleEnemies.sort((a, b) => Math.hypot(a.x - bot.x, a.y - bot.y) - Math.hypot(b.x - bot.x, b.y - bot.y))[0];
                 const distanceToEnemy = closestEnemy ? Math.hypot(closestEnemy.x - bot.x, closestEnemy.y - bot.y) : Infinity;
 
-                const enemyGem = gems.find(g => g.team !== bot.team);
-                const ownGem = gems.find(g => g.team === bot.team);
-                const carriedGem = gems.find(g => g.carrier === bot);
+                const enemyPhone = phones.find(g => g.team !== bot.team);
+                const ownPhone = phones.find(g => g.team === bot.team);
+                const carriedPhone = phones.find(g => g.carrier === bot);
 
-                if (carriedGem) {
-                    bot.aiState = 'RETURN_GEM';
-                    bot.aiMoveTo = { x: ownGem.baseX, y: ownGem.baseY };
-                } else if (distanceToEnemy < 400) {
+                if (carriedPhone) {
+                    bot.aiState = 'RETURN_PHONE';
+                    bot.aiMoveTo = { x: ownPhone.baseX, y: ownPhone.baseY };
+                } else if (distanceToEnemy < 600) {
                     bot.aiState = 'ATTACK';
                     bot.aiTarget = closestEnemy;
                     bot.aiMoveTo = { x: closestEnemy.x, y: closestEnemy.y };
                 } else {
-                    bot.aiState = 'GET_GEM';
-                    bot.aiMoveTo = { x: enemyGem.x, y: enemyGem.y };
+                    bot.aiState = 'GET_PHONE';
+                    bot.aiMoveTo = { x: enemyPhone.x, y: enemyPhone.y };
                 }
 
-                // Action
                 if (bot.aiMoveTo) {
+                    let currentSpeed = bot.speed;
+                    if (bot.effects.rucking || bot.effects.traumatized || bot.effects.charging || bot.effects.resting || bot.effects.isAirborne) currentSpeed = 0;
+
                     const angle = Math.atan2(bot.aiMoveTo.y - bot.y, bot.aiMoveTo.x - bot.x);
-                    const moveX = Math.cos(angle) * bot.speed;
-                    const moveY = Math.sin(angle) * bot.speed;
+                    const moveX = Math.cos(angle) * currentSpeed;
+                    const moveY = Math.sin(angle) * currentSpeed;
                     bot.x += moveX;
                     bot.y += moveY;
 
-                    // Barrier collision for bots
                     for (const wall of barriers) {
-                        if (bot.team !== wall.team && Math.hypot(bot.x - wall.x, bot.y - wall.y) < bot.radius + wall.width / 2) {
-                            bot.x -= moveX; // Revert
-                            bot.y -= moveY;
+                        if (Math.hypot(bot.x - wall.x, bot.y - wall.y) < bot.radius + wall.width / 2) {
+                            bot.x -= moveX; bot.y -= moveY;
                             break;
                         }
                     }
                 }
 
-                if (bot.aiState === 'ATTACK' && distanceToEnemy < 350) {
+                if (bot.aiState === 'ATTACK' && distanceToEnemy < 550) {
                     const currentTime = performance.now();
                      if (currentTime - bot.lastShotTime > (1000 / bot.fireRate )) {
                         createProjectile(bot, bot.aiTarget);
@@ -1357,26 +1401,26 @@
             }
         }
 
-        function updateGems() {
+        function updatePhones() {
             const currentTime = Date.now();
-            gems.forEach(gem => {
-                if (gem.carrier) {
-                    if (gem.team === 'A') teamAGemStolen = true;
-                    if (gem.team === 'B') teamBGemStolen = true;
+            phones.forEach(phone => {
+                if (phone.carrier) {
+                    if (phone.team === 'A') teamAPhoneStolen = true;
+                    if (phone.team === 'B') teamBPhoneStolen = true;
                 }
-                if (!gem.carrier && (gem.x === gem.baseX && gem.y === gem.baseY)) {
-                     if (gem.team === 'A') teamAGemStolen = false;
-                     if (gem.team === 'B') teamBGemStolen = false;
+                if (!phone.carrier && (phone.x === phone.baseX && phone.y === phone.baseY)) {
+                     if (phone.team === 'A') teamAPhoneStolen = false;
+                     if (phone.team === 'B') teamBPhoneStolen = false;
                 }
 
-                if (gem.carrier) {
-                    gem.x = gem.carrier.x;
-                    gem.y = gem.carrier.y - gem.carrier.radius - 15;
-                } else if (gem.droppedAt > 0 && currentTime - gem.droppedAt > 60000) {
-                    gem.x = gem.baseX; gem.y = gem.baseY; gem.droppedAt = 0;
-                    showMessage(`Team ${gem.team}'s gem returned to base!`);
-                    if (gem.team === 'A') teamAGemStolen = false;
-                    if (gem.team === 'B') teamBGemStolen = false;
+                if (phone.carrier) {
+                    phone.x = phone.carrier.x;
+                    phone.y = phone.carrier.y - phone.carrier.radius - 15;
+                } else if (phone.droppedAt > 0 && currentTime - phone.droppedAt > 60000) {
+                    phone.x = phone.baseX; phone.y = phone.baseY; phone.droppedAt = 0;
+                    showMessage(`Team ${phone.team}'s phone returned to base!`);
+                    if (phone.team === 'A') teamAPhoneStolen = false;
+                    if (phone.team === 'B') teamBPhoneStolen = false;
                 }
             });
         }
@@ -1391,7 +1435,7 @@
                         if (p.shield > 0) p.shield = Math.max(0, p.shield - 5 / 60);
                         else p.health = Math.max(0, p.health - 5 / 60);
 
-                        if (!p.effects.acidSlow) { // Only show text once
+                        if (!p.effects.acidSlow) {
                            createStatusText(p, "Slowed!", '#2ecc71', 2000);
                         }
                         p.effects.acidSlow = true;
@@ -1435,24 +1479,73 @@
                     p.effects.acidDoT.lastTick = timestamp;
                     p.effects.hitFlash = { end: timestamp + 100 };
                 }
+
+                if (p.effects.ebola && timestamp > (p.effects.ebola.lastTick || 0) + 100) {
+                    p.health = Math.max(0, p.health - 1); // 10 DPS
+                    createDamageNumber(p.x, p.y, 1, '#2e8b57');
+                    p.effects.ebola.lastTick = timestamp;
+                    // Spread logic
+                    gameObjects.forEach(other => {
+                        if (other !== p && other.isAlive && other.team === p.team && !other.effects.ebola) {
+                            if (Math.hypot(p.x - other.x, p.y - other.y) < 100) {
+                                other.effects.ebola = { lastTick: 0 };
+                                createStatusText(other, "INFECTED", "#2e8b57", 2000);
+                            }
+                        }
+                    });
+                }
+
                 if (p.effects.charging) {
                     const angle = p.effects.charging.angle;
                     p.x += Math.cos(angle) * 25;
                     p.y += Math.sin(angle) * 25;
                     p.x = Math.max(p.radius, Math.min(mapWidth - p.radius, p.x));
                     p.y = Math.max(p.radius, Math.min(mapHeight - p.radius, p.y));
+
+                    gameObjects.forEach(enemy => {
+                        if (enemy !== p && enemy.isAlive && enemy.team !== p.team) {
+                            if (Math.hypot(p.x - enemy.x, p.y - enemy.y) < p.radius + enemy.radius) {
+                                if (!enemy.effects.knockback) {
+                                    const knockbackAngle = Math.atan2(enemy.y - p.y, enemy.x - p.x);
+                                    enemy.effects.knockback = { end: timestamp + 300, angle: knockbackAngle, speed: 15 };
+                                }
+                            }
+                        }
+                    });
+                }
+
+                if (p.effects.isAirborne) {
+                    p.x += Math.cos(p.effects.isAirborne.angle) * p.effects.isAirborne.speed;
+                    p.y += Math.sin(p.effects.isAirborne.angle) * p.effects.isAirborne.speed;
+                    // Check for wall collision
+                    if (p.x <= 0 || p.x >= mapWidth || p.y <= 0 || p.y >= mapHeight) {
+                        p.health = Math.max(0, p.health - 50);
+                        createDamageNumber(p.x, p.y, 50, 'red');
+                        delete p.effects.isAirborne;
+                    }
+                }
+
+                if (p.effects.knockback) {
+                    p.x += Math.cos(p.effects.knockback.angle) * p.effects.knockback.speed;
+                    p.y += Math.sin(p.effects.knockback.angle) * p.effects.knockback.speed;
+                    p.effects.knockback.speed *= 0.9;
                 }
 
                 for (const effectName in p.effects) {
                     const effect = p.effects[effectName];
                     if (effect && effect.duration && timestamp > effect.end) {
-                        if (effectName === 'sprint') p.speed = p.baseSpeed;
-                        if (effectName === 'gun') applyWeaponStats(p);
-                        if (effectName === 'cocoon') {
-                             p.maxHealth -= 500; p.health = Math.min(p.health, p.maxHealth);
-                             applyWeaponStats(p); // Restore damage
+                        if (effectName === 'resting') {
+                            p.effects.pumped = { duration: 10000, end: timestamp + 10000 };
+                            createStatusText(p, "PUMPED!", "orange", 2000);
                         }
-                        if (effectName === 'wallShield') p.shield = 0;
+
+                        delete p.effects[effectName];
+                        applyWeaponStats(p); // Re-apply stats after an effect wears off
+                    }
+                    if (effectName === 'knockback' && timestamp > effect.end) {
+                        delete p.effects[effectName];
+                    }
+                    if (effectName === 'isAirborne' && timestamp > effect.end) {
                         delete p.effects[effectName];
                     }
                 }
@@ -1487,21 +1580,31 @@
                     if (!player.isAlive || player.team === proj.team || player.effects.rucking || player.effects.charging) continue;
 
                     if (Math.hypot(proj.x - player.x, proj.y - player.y) < player.radius) {
-                        let damageToDeal = proj.damage;
-                        if (player.effects.kickVulnerability) damageToDeal *= 1.5;
+                        if (proj.isAnnihilation) {
+                            player.health = 0;
+                            createDamageNumber(player.x, player.y, 9999, 'white');
+                        } else {
+                            let damageToDeal = proj.damage;
+                            if (player.effects.kickVulnerability) damageToDeal *= 1.5;
 
-                        if (player.shield > 0) {
-                            const shieldDamage = Math.min(player.shield, damageToDeal);
-                            player.shield -= shieldDamage;
-                            damageToDeal -= shieldDamage;
+                            if (player.shield > 0) {
+                                const shieldDamage = Math.min(player.shield, damageToDeal);
+                                player.shield -= shieldDamage;
+                                damageToDeal -= shieldDamage;
+                            }
+                            player.health = Math.max(0, player.health - damageToDeal);
+                            createDamageNumber(player.x, player.y, proj.damage);
                         }
-                        player.health = Math.max(0, player.health - damageToDeal);
-                        createDamageNumber(player.x, player.y, proj.damage);
 
                         player.effects.hitFlash = { end: performance.now() + 100 };
                         if (proj.isAcid) {
                             player.effects.acidDoT = { duration: 15000, end: performance.now() + 15000, lastTick: 0 };
                             acidPuddles.push({x: proj.x, y: proj.y, radius: 30, endTime: performance.now() + 5000});
+                        }
+                        if (proj.isScissor) {
+                            player.effects.regenBlock = true;
+                            createStatusText(player, "Healing Blocked!", "purple", 3000);
+                            applyWeaponStats(player);
                         }
                         if(player.health <= 0) {
                            player.isAlive = false; player.deaths++;
@@ -1512,8 +1615,8 @@
                                respawnScreen.style.display = 'flex';
                                selectNextWeapon(player.weapon);
                            }
-                           const carriedGem = gems.find(g => g.carrier === player);
-                           if (carriedGem) { carriedGem.carrier = null; carriedGem.droppedAt = Date.now(); showMessage(`${player.name} dropped the gem!`); }
+                           const carriedPhone = phones.find(g => g.carrier === player);
+                           if (carriedPhone) { carriedPhone.carrier = null; carriedPhone.droppedAt = Date.now(); showMessage(`${player.name} dropped the phone!`); }
                         }
                         projectiles.splice(i, 1);
                         break;
@@ -1522,17 +1625,18 @@
             }
             gameObjects.forEach(player => {
                 if (!player.isAlive) return;
-                gems.forEach(gem => {
-                    if (player.team !== gem.team && !gem.carrier) {
-                        if (Math.hypot(player.x - gem.x, player.y - gem.y) < player.radius + gem.size / 2) {
-                            gem.carrier = player; gem.droppedAt = 0;
-                            showMessage(`${player.name} picked up Team ${gem.team}'s gem!`);
+                phones.forEach(phone => {
+                    if (player.team !== phone.team && !phone.carrier) {
+                        if (Math.hypot(player.x - phone.x, player.y - phone.y) < player.radius + phone.size / 2) {
+                            phone.carrier = player; phone.droppedAt = 0;
+                            player.phonesStolen++;
+                            showMessage(`${player.name} picked up Team ${phone.team}'s phone!`);
                         }
                     }
                 });
-                const carriedGem = gems.find(g => g.carrier === player);
-                if(carriedGem) {
-                    const homeBase = gems.find(g => g.team === player.team);
+                const carriedPhone = phones.find(g => g.carrier === player);
+                if(carriedPhone) {
+                    const homeBase = phones.find(g => g.team === player.team);
                     if (Math.hypot(player.x - homeBase.baseX, player.y - homeBase.baseY) < 50) {
                         if(player.team === 'A') {
                             teamAScore++;
@@ -1545,9 +1649,9 @@
                             scoreEl.classList.add('score-flash');
                             setTimeout(() => scoreEl.classList.remove('score-flash'), 600);
                         }
-                        player.gemsScored++;
+                        player.phonesScored++;
                         showMessage(`${player.name} scored for ${player.team === 'A' ? teamAName : teamBName}!`);
-                        carriedGem.carrier = null; carriedGem.x = carriedGem.baseX; carriedGem.y = carriedGem.baseY; carriedGem.droppedAt = 0;
+                        carriedPhone.carrier = null; carriedPhone.x = carriedPhone.baseX; carriedPhone.y = carriedPhone.baseY; carriedPhone.droppedAt = 0;
                         if(teamAScore >= scoreToWin) endGame(teamAName);
                         else if (teamBScore >= scoreToWin) endGame(teamBName);
                     }
@@ -1579,7 +1683,7 @@
                                 <tr>
                                     <th>Player</th>
                                     <th>KDA</th>
-                                    <th>Gems Scored</th>
+                                    <th>Phones Scored</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1591,7 +1695,7 @@
                         <tr>
                             <td>${p.name} ${p.isCaptain ? '👑' : ''}</td>
                             <td>${p.kills}/${p.deaths}/${p.assists}</td>
-                            <td>${p.gemsScored}</td>
+                            <td>${p.phonesScored}</td>
                         </tr>
                     `;
                 });
@@ -1625,14 +1729,14 @@
             for (let i = 0; i < mapWidth; i += 50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, mapHeight); ctx.stroke(); }
             for (let i = 0; i < mapHeight; i += 50) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(mapWidth, i); ctx.stroke(); }
 
-            gems.forEach(gem => {
-                const isTeamA = gem.team === 'A';
+            phones.forEach(phone => {
+                const isTeamA = phone.team === 'A';
                 const teamColor = isTeamA ? 'rgba(240, 77, 93, 0.5)' : 'rgba(0, 184, 212, 0.5)';
                 const gradColorStop = isTeamA ? 'rgba(240, 77, 93, 0.3)' : 'rgba(0, 184, 212, 0.3)';
 
                 ctx.beginPath();
-                ctx.arc(gem.baseX, gem.baseY, 50, 0, Math.PI * 2);
-                const grad = ctx.createRadialGradient(gem.baseX, gem.baseY, 10, gem.baseX, gem.baseY, 50);
+                ctx.arc(phone.baseX, phone.baseY, 50, 0, Math.PI * 2);
+                const grad = ctx.createRadialGradient(phone.baseX, phone.baseY, 10, phone.baseX, phone.baseY, 50);
                 grad.addColorStop(0, gradColorStop);
                 grad.addColorStop(1, 'rgba(0,0,0,0)');
                 ctx.fillStyle = grad;
@@ -1647,7 +1751,6 @@
                 ctx.beginPath(); ctx.arc(puddle.x, puddle.y, puddle.radius, 0, Math.PI * 2); ctx.fill();
             });
 
-            // Draw particles before other objects
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
                 p.x += p.vx; p.y += p.vy; p.alpha -= 1 / p.lifespan;
@@ -1659,7 +1762,7 @@
             }
 
             gameObjects.sort((a,b) => a.y - b.y);
-            gems.forEach(gem => { if (!gem.carrier) { ctx.font = `${gem.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('💎', gem.x, gem.y); }});
+            phones.forEach(phone => { if (!phone.carrier) { ctx.font = `${phone.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('📱', phone.x, phone.y); }});
 
             turrets.forEach(turret => {
                 const angle = turret.target ? Math.atan2(turret.target.y - turret.y, turret.target.x - turret.x) : (turret.team === 'A' ? 0 : Math.PI);
@@ -1681,20 +1784,33 @@
                 ctx.fillStyle = wall.team === 'A' ? 'rgba(240, 77, 93, 0.7)' : 'rgba(0, 184, 212, 0.7)';
                 ctx.strokeStyle = wall.team === 'A' ? 'var(--team-a-color)' : 'var(--team-b-color)';
                 ctx.lineWidth = 3;
-
                 ctx.beginPath();
                 ctx.rect(-wall.width / 2, -wall.height / 2, wall.width, wall.height);
                 ctx.fill();
                 ctx.stroke();
-
-                // Health bar for barrier
                 const barY = -wall.height / 2 - 10;
                 ctx.fillStyle = '#333'; ctx.fillRect(-wall.width/2, barY, wall.width, 5);
                 const hp = wall.health / wall.maxHealth;
                 ctx.fillStyle = hp > 0.6 ? '#2ecc71' : hp > 0.3 ? '#f1c40f' : '#e74c3c';
                 ctx.fillRect(-wall.width/2, barY, wall.width * hp, 5);
-
                 ctx.restore();
+            });
+
+            visualEffects.forEach(effect => {
+                const life = (now - effect.start) / effect.duration;
+                const alpha = 1 - life;
+                ctx.globalAlpha = alpha > 0 ? alpha : 0;
+                if (effect.type === 'kick_burst') {
+                    ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 5 * (1 - life); ctx.beginPath();
+                    ctx.arc(effect.x, effect.y, 10 + life * 40, 0, Math.PI * 2); ctx.stroke();
+                } else if (effect.type === 'trauma') {
+                    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 8 * (1 - life); ctx.beginPath();
+                    ctx.arc(effect.x, effect.y, life * 150, 0, Math.PI * 2); ctx.stroke();
+                } else if (effect.type === 'destroy_pulse') {
+                    ctx.fillStyle = `rgba(192, 57, 43, ${0.5 * alpha})`; ctx.beginPath();
+                    ctx.arc(effect.x, effect.y, life * 75, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.globalAlpha = 1;
             });
 
             gameObjects.forEach(obj => {
@@ -1708,38 +1824,34 @@
                 if (obj.effects.charging) {
                     const chargeAngle = obj.effects.charging.angle;
                     for (let i = 1; i <= 4; i++) {
-                        ctx.fillStyle = `rgba(255, 255, 150, ${0.4 - i * 0.1})`;
-                        ctx.beginPath();
-                        const trailX = -Math.cos(chargeAngle) * i * 10;
-                        const trailY = -Math.sin(chargeAngle) * i * 10;
-                        if (obj.team === 'A') {
-                            ctx.arc(trailX, trailY, obj.radius, 0, Math.PI * 2);
-                        } else {
-                            ctx.rect(trailX - obj.radius, trailY - obj.radius, obj.radius * 2, obj.radius * 2);
-                        }
+                        ctx.fillStyle = `rgba(255, 255, 150, ${0.4 - i * 0.1})`; ctx.beginPath();
+                        const trailX = -Math.cos(chargeAngle) * i * 10; const trailY = -Math.sin(chargeAngle) * i * 10;
+                        if (obj.team === 'A') { ctx.arc(trailX, trailY, obj.radius, 0, Math.PI * 2); }
+                        else { ctx.rect(trailX - obj.radius, trailY - obj.radius, obj.radius * 2, obj.radius * 2); }
                         ctx.fill();
                     }
                 }
                 if (obj.effects.rucking) {
                     const shimmerAlpha = 0.6 + Math.random() * 0.3;
-                    ctx.fillStyle = `rgba(180, 180, 190, ${shimmerAlpha})`;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, obj.radius + 5, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.fillStyle = `rgba(180, 180, 190, ${shimmerAlpha})`; ctx.beginPath();
+                    ctx.arc(0, 0, obj.radius + 5, 0, Math.PI * 2); ctx.fill();
                 }
-                if (obj.effects.sprint) {
+                if (obj.effects.sprint || obj.effects.pumped) {
                      for (let i = 1; i <= 3; i++) {
-                        ctx.fillStyle = `rgba(255, 255, 255, ${0.3 - i * 0.1})`;
-                        ctx.beginPath();
-                        const trailX = -Math.cos(aimAngle) * i * 15;
-                        const trailY = -Math.sin(aimAngle) * i * 15;
-                        if (obj.team === 'A') {
-                            ctx.arc(trailX, trailY, obj.radius, 0, Math.PI * 2);
-                        } else {
-                            ctx.rect(trailX - obj.radius, trailY - obj.radius, obj.radius * 2, obj.radius * 2);
-                        }
+                        ctx.fillStyle = `rgba(255, 255, 255, ${0.3 - i * 0.1})`; ctx.beginPath();
+                        const trailX = -Math.cos(aimAngle) * i * 15; const trailY = -Math.sin(aimAngle) * i * 15;
+                        if (obj.team === 'A') { ctx.arc(trailX, trailY, obj.radius, 0, Math.PI * 2); }
+                        else { ctx.rect(trailX - obj.radius, trailY - obj.radius, obj.radius * 2, obj.radius * 2); }
                         ctx.fill();
                     }
+                }
+                if (obj.effects.awakened) {
+                     ctx.fillStyle = `rgba(255, 0, 0, ${0.3 + Math.random() * 0.2})`; ctx.beginPath();
+                     ctx.arc(0,0,obj.radius + 6, 0, Math.PI*2); ctx.fill();
+                }
+                if (obj.effects.ebola) {
+                    ctx.fillStyle = `rgba(46, 139, 87, ${0.4 + Math.random() * 0.2})`; ctx.beginPath();
+                    ctx.arc(0,0,obj.radius + 4, 0, Math.PI*2); ctx.fill();
                 }
                 if (obj.effects.glitched) { ctx.strokeStyle = Math.random() > 0.5 ? 'cyan' : 'magenta'; ctx.lineWidth = 3; ctx.strokeRect(-obj.radius, -obj.radius, obj.radius*2, obj.radius*2); }
                 if (obj.effects.pinged && obj !== localPlayer) { ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, obj.radius + 3, 0, Math.PI * 2); ctx.stroke(); }
@@ -1756,8 +1868,7 @@
                 ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
 
                 ctx.font = `${obj.radius * 1.5}px Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(characterClasses[obj.class].icon, 0, 0);
 
                 if (obj.effects.cocoon) { ctx.fillStyle = 'rgba(139, 69, 19, 0.5)'; ctx.beginPath(); ctx.arc(0,0,obj.radius + 8, 0, Math.PI*2); ctx.fill(); }
@@ -1768,10 +1879,9 @@
                 ctx.fillRect(obj.radius / 2, -5, obj.radius, 10);
                 ctx.restore();
 
-                const carriedGem = gems.find(g => g.carrier === obj);
-                if (carriedGem) { ctx.font = '24px Arial'; ctx.fillText('💎', obj.x, obj.y - obj.radius - 20); }
+                const carriedPhone = phones.find(g => g.carrier === obj);
+                if (carriedPhone) { ctx.font = '24px Arial'; ctx.fillText('📱', obj.x, obj.y - obj.radius - 20); }
 
-                // Health and Shield bars
                 const barWidth = obj.radius * 2 + 10;
                 const barY = obj.y - obj.radius - 12;
                 ctx.fillStyle = '#333'; ctx.fillRect(obj.x - barWidth/2, barY, barWidth, 6);
@@ -1788,27 +1898,22 @@
                 }
             });
 
-            visualEffects.forEach(effect => { /* ... (visual effects drawing) ... */ });
-
             projectiles.forEach(p => {
-                ctx.fillStyle = p.isAcid ? '#7FFF00' : 'var(--gem-color)';
+                ctx.fillStyle = p.isAcid ? '#7FFF00' : p.isAnnihilation ? 'white' : 'var(--gem-color)';
                 ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
                 ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 10;
                 ctx.fill();
                 ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
             });
 
-            // Draw Floating Text (Damage & Status)
             for (let i = damageNumbers.length - 1; i >= 0; i--) {
                 const dn = damageNumbers[i];
-                const life = (now - dn.startTime) / 1000; // life in seconds
+                const life = (now - dn.startTime) / 1000;
                 if (life > 1) { damageNumbers.splice(i, 1); continue; }
-                dn.y -= 0.5; // move up
-                dn.alpha = 1 - life;
+                dn.y -= 0.5; dn.alpha = 1 - life;
                 ctx.globalAlpha = dn.alpha;
                 ctx.font = 'bold 18px ' + getComputedStyle(document.body).getPropertyValue('--font-main');
-                ctx.fillStyle = dn.color;
-                ctx.textAlign = 'center';
+                ctx.fillStyle = dn.color; ctx.textAlign = 'center';
                 ctx.fillText(dn.text, dn.x, dn.y);
                 ctx.globalAlpha = 1;
             }
@@ -1818,8 +1923,7 @@
                 const target = gameObjects.find(p => p.id === st.targetId);
                 if (target) {
                     ctx.font = 'bold 16px ' + getComputedStyle(document.body).getPropertyValue('--font-main');
-                    ctx.fillStyle = st.color;
-                    ctx.textAlign = 'center';
+                    ctx.fillStyle = st.color; ctx.textAlign = 'center';
                     ctx.fillText(st.text, target.x, target.y - target.radius - 30);
                 }
             }
@@ -1885,21 +1989,21 @@
                 }
             });
 
-            gems.forEach(gem => { minimapCtx.fillStyle = 'white'; minimapCtx.beginPath(); minimapCtx.arc(gem.x * scaleX, gem.y * scaleY, 3, 0, Math.PI*2); minimapCtx.fill(); });
+            phones.forEach(phone => { minimapCtx.fillStyle = 'white'; minimapCtx.beginPath(); minimapCtx.arc(phone.x * scaleX, phone.y * scaleY, 3, 0, Math.PI*2); minimapCtx.fill(); });
             minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; minimapCtx.lineWidth = 1;
             minimapCtx.strokeRect(camera.x * scaleX, camera.y * scaleY, canvas.width * scaleX, canvas.height * scaleY);
         }
 
         function updateGameUI() {
             if (!localPlayer) return;
-            // Gem Status UI
-            const warningA = document.getElementById('gem-stolen-warning-a');
-            const warningB = document.getElementById('gem-stolen-warning-b');
+            // Phone Status UI
+            const warningA = document.getElementById('phone-stolen-warning-a');
+            const warningB = document.getElementById('phone-stolen-warning-b');
             if (localPlayer.team === 'A') {
-                warningA.style.display = teamAGemStolen ? 'block' : 'none';
+                warningA.style.display = teamAPhoneStolen ? 'block' : 'none';
                 warningB.style.display = 'none';
             } else if (localPlayer.team === 'B') {
-                warningB.style.display = teamBGemStolen ? 'block' : 'none';
+                warningB.style.display = teamBPhoneStolen ? 'block' : 'none';
                 warningA.style.display = 'none';
             }
 
@@ -1939,7 +2043,7 @@
                                 <tr>
                                     <th>Player</th>
                                     <th>KDA</th>
-                                    <th>Gems</th>
+                                    <th>Phones Stolen</th>
                                     <th>Status</th>
                                     ${localPlayer.team === team ? '<th>Abilities (Q/E)</th>' : ''}
                                 </tr>
@@ -1947,11 +2051,9 @@
                             <tbody>
                 `;
                 const playersInTeam = gameObjects.filter(p => p.team === team);
-
-                playersInTeam.sort((a,b) => b.kills - a.kills); // Sort by kills
+                playersInTeam.sort((a,b) => b.kills - a.kills);
 
                 playersInTeam.forEach(p => {
-                    // Status
                     let status;
                     if (p.isAlive) {
                         status = `HP: ${Math.ceil(p.health)}`;
@@ -1960,7 +2062,6 @@
                         status = `<span class="status-dead">Respawn: ${respawnTime}s</span>`;
                     }
 
-                    // Abilities (for allies only)
                     let abilitiesHTML = '';
                     if (localPlayer.team === team) {
                         const classInfo = characterClasses[p.class];
@@ -1977,7 +2078,7 @@
                         <tr>
                             <td>${p.name} ${p.isCaptain ? '👑' : ''}</td>
                             <td>${p.kills}/${p.deaths}/${p.assists}</td>
-                            <td>${p.gemsScored}</td>
+                            <td>${p.phonesStolen}</td>
                             <td>${status}</td>
                             ${abilitiesHTML}
                         </tr>
@@ -2010,7 +2111,7 @@
             if (now < (player[cooldownProp] || 0)) return;
 
             let cooldown = abilityCooldowns[abilityName] * 1000;
-            let abilityUsed = true; // a flag to check if ability was successfully used
+            let abilityUsed = true;
 
             switch(abilityName) {
                 case 'Ruck': player.effects.rucking = { duration: 5000, end: now + 5000 }; showMessage(`You became immune!`); break;
@@ -2020,7 +2121,7 @@
                     player.effects.charging = { duration: 750, end: now + 750, angle: angleCharge };
                     showMessage(`You are charging!`);
                     break;
-                case 'Sprint': player.speed = player.baseSpeed * 2; player.effects.sprint = { duration: 5000, end: now + 5000 }; break;
+                case 'Sprint': player.effects.sprint = { duration: 5000, end: now + 5000 }; applyWeaponStats(player); break;
                 case 'Kick':
                     const kickTarget = gameObjects.find(p => p.isAlive && p.team !== player.team && Math.hypot(p.x - player.x, p.y - player.y) < 50);
                     if (kickTarget) {
@@ -2054,32 +2155,65 @@
                     const aimTargetBarrier = (player === localPlayer) ? { x: mousePos.x + camera.x, y: mousePos.y + camera.y } : (player.aiTarget || {x: player.x + 1, y: player.y});
                     const angleBarrier = Math.atan2(aimTargetBarrier.y - player.y, aimTargetBarrier.x - player.x);
                     barriers.push({
-                        x: player.x + Math.cos(angleBarrier) * 50, // Place it slightly in front of the player
+                        x: player.x + Math.cos(angleBarrier) * 50,
                         y: player.y + Math.sin(angleBarrier) * 50,
-                        width: 72,
-                        height: 20,
-                        angle: angleBarrier,
-                        team: player.team,
-                        health: 1000,
-                        maxHealth: 1000
+                        width: 72, height: 20, angle: angleBarrier, team: player.team, health: 1000, maxHealth: 1000
                     });
                     abilityUsed = true;
                     break;
-                case 'Gun':
-                    player.effects.gun = { duration: 20000, end: now + 20000 };
-                    applyWeaponStats(player);
-                    break;
-                case 'Cocoon': player.maxHealth += 500; player.health += 500; player.damage = 1; player.effects.cocoon = { duration: 10000, end: now + 10000 }; break;
+                case 'Gun': player.effects.gun = { duration: 20000, end: now + 20000 }; applyWeaponStats(player); break;
+                case 'Cocoon': player.maxHealth += 500; player.health += 500; player.effects.cocoon = { duration: 10000, end: now + 10000 }; applyWeaponStats(player); break;
                 case 'Ping': gameObjects.forEach(p => { if (p.team !== player.team) p.effects.pinged = { duration: 2000, end: now + 2000 }; }); break;
                 case 'Glitch':
                     let closest = null, minDist = 100;
                     gameObjects.forEach(p => { if (p !== player && p.isAlive && p.team === player.team) { const d = Math.hypot(p.x-player.x,p.y-player.y); if(d<minDist){minDist=d;closest=p;}}});
                     if (closest && !closest.effects.glitched) {
-                        closest.maxHealth *= 2; closest.health *= 2; closest.damage *= 2;
-                        closest.effects.glitched = true; // Apply permanent effect
+                        closest.maxHealth *= 2; closest.health *= 2;
+                        closest.effects.glitched = true;
+                        applyWeaponStats(closest);
                         if (player === localPlayer) showMessage(`${player.name} glitched ${closest.name}!`);
                     } else { abilityUsed = false; }
                     break;
+                case 'Annihilation':
+                    const target = (player === localPlayer) ? { x: mousePos.x + camera.x, y: mousePos.y + camera.y } : player.aiTarget;
+                    if (target) createProjectile(player, target, 'annihilation');
+                    else abilityUsed = false;
+                    break;
+                case 'Ebola':
+                    let closestEbolaTarget = null, minEbolaDist = 150;
+                    gameObjects.forEach(p => { if (p.isAlive && p.team !== player.team) { const d = Math.hypot(p.x-player.x,p.y-player.y); if(d<minEbolaDist){minEbolaDist=d;closestEbolaTarget=p;}}});
+                    if (closestEbolaTarget && !closestEbolaTarget.effects.ebola) {
+                        closestEbolaTarget.effects.ebola = { lastTick: 0 };
+                        createStatusText(closestEbolaTarget, "INFECTED", "#2e8b57", 2000);
+                    } else { abilityUsed = false; }
+                    break;
+                case 'Curl':
+                    let closestCurlTarget = null, minCurlDist = 100;
+                    gameObjects.forEach(p => { if (p.isAlive && p.team !== player.team) { const d = Math.hypot(p.x-player.x,p.y-player.y); if(d<minCurlDist){minCurlDist=d;closestCurlTarget=p;}}});
+                    if (closestCurlTarget) {
+                         const angle = Math.atan2(closestCurlTarget.y - player.y, closestCurlTarget.x - player.x);
+                         closestCurlTarget.effects.isAirborne = { duration: 1000, end: now + 1000, angle: angle, speed: 20 };
+                         player.effects.damageDown = { duration: 15000, end: now + 15000 };
+                         applyWeaponStats(player);
+                    } else { abilityUsed = false; }
+                    break;
+                case 'Rest':
+                    player.effects.resting = { duration: 3000, end: now + 3000 };
+                    createStatusText(player, "Resting...", "cyan", 3000);
+                    break;
+                case 'Awaken':
+                    if (player.health < player.maxHealth * 0.5) {
+                        player.effects.awakened = true;
+                        player.maxHealth *= 2.5;
+                        player.health = player.maxHealth;
+                        applyWeaponStats(player);
+                        createStatusText(player, "AWAKENED!", "red", 5000);
+                    } else {
+                        showMessage("Health must be below 50% to use Awaken!");
+                        abilityUsed = false;
+                    }
+                    break;
+                case 'Help': showMessage("This ability is not yet implemented."); abilityUsed = false; break;
             }
             if (abilityUsed) {
                 player[cooldownProp] = now + cooldown;
